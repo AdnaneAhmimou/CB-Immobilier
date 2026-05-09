@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Bien {
+  id              String   @id @default(uuid())
+  type            String   // Appartement, Villa, Maison, Terrain
+  statut          String   @default("Disponible") // Disponible, Réservé, Vendu, Loué
+  transactionType String   // Vente, Location
+  localisation    String
+  superficie      Float
+  pieces          Int
+  prix            Float
+  equipements     String?
+  createdAt       DateTime @default(now())
+
+  // Vente: vendeur vend → acheteur achète
+  vendeurId       String?
+  vendeur         Client?  @relation("BienVendeur",   fields: [vendeurId],   references: [id])
+  acheteurId      String?
+  acheteur        Client?  @relation("BienAcheteur",  fields: [acheteurId],  references: [id])
+
+  // Location: bailleur loue → locataire prend
+  bailleurId      String?
+  bailleur        Client?  @relation("BienBailleur",  fields: [bailleurId],  references: [id])
+  locataireId     String?
+  locataire       Client?  @relation("BienLocataire", fields: [locataireId], references: [id])
+
+  documents    Document[]
+  visites      Visite[]
+  offres       Offre[]
+  transactions Transaction[]
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  nom         String
+  prenom      String
+  cin         String?  @unique
+  telephone   String
+  email       String?
+  type        String   // Vendeur, Acheteur, Locataire, Bailleur
+  budget      Float?   // budget max pour Acheteur / loyer max pour Locataire
+  commission  Float?   // taux commission agence pour Vendeur / Bailleur
+  statut      String   @default("Nouveau contact")
+  criteres    String?
+  createdAt   DateTime @default(now())
+
+  // Biens liés selon le rôle
+  biensAVendre   Bien[] @relation("BienVendeur")
+  biensAchetes   Bien[] @relation("BienAcheteur")
+  biensALouer    Bien[] @relation("BienBailleur")
+  biensLoues     Bien[] @relation("BienLocataire")
+
+  visites      Visite[]
+  offres       Offre[]
+  documents    Document[]
+  transactions Transaction[]
+}
+
+model Agent {
+  id        String  @id @default(uuid())
+  nom       String
+  telephone String
+  email     String  @unique
+  password  String
+
+  visites   Visite[]
+}
+
+model Visite {
+  id      String   @id @default(uuid())
+  date    DateTime
+  retour  String?  // Intéressé, Pas intéressé, Veut négocier
+
+  bienId   String
+  bien     Bien    @relation(fields: [bienId],   references: [id])
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id])
+  agentId  String?
+  agent    Agent?  @relation(fields: [agentId],  references: [id])
+}
+
+model Offre {
+  id        String   @id @default(uuid())
+  montant   Float
+  statut    String   @default("En cours") // En cours, Acceptée, Refusée
+  createdAt DateTime @default(now())
+
+  bienId   String
+  bien     Bien   @relation(fields: [bienId],   references: [id])
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+}
+
+model Transaction {
+  id            String    @id @default(uuid())
+  type          String    // Vente, Location
+  prixFinal     Float
+  commission    Float
+  dateSignature DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  bienId   String
+  bien     Bien   @relation(fields: [bienId],   references: [id])
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+}
+
+model BienType {
+  id    String @id @default(uuid())
+  label String @unique
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  nom       String
+  filePath  String
+  createdAt DateTime @default(now())
+
+  bienId   String?
+  bien     Bien?   @relation(fields: [bienId],   references: [id])
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+}
