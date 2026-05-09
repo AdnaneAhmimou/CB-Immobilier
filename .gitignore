@@ -17,6 +17,8 @@ backend/uploads/*
 # Build output
 frontend/dist/
 frontend/.vite/
+website/dist/
+website/.vite/
 
 # Claude internal
 .claude/

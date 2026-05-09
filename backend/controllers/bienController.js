@@ -9,6 +9,16 @@ const BIEN_INCLUDE = {
   documents: true,
 };
 
+exports.getPublicBiens = catchAsync(async (req, res) => {
+  const biens = await prisma.bien.findMany({
+    where: { statut: 'Disponible' },
+    include: { documents: { take: 1 } },
+    orderBy: { createdAt: 'desc' },
+    take: 9,
+  });
+  res.json(biens);
+});
+
 exports.getAllBiens = catchAsync(async (req, res) => {
   const biens = await prisma.bien.findMany({
     include: BIEN_INCLUDE,
