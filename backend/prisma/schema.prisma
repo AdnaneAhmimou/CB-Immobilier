@@ -9,9 +9,9 @@ datasource db {
 
 model Bien {
   id              String   @id @default(uuid())
-  type            String   // Appartement, Villa, Maison, Terrain
-  statut          String   @default("Disponible") // Disponible, Réservé, Vendu, Loué
-  transactionType String   // Vente, Location
+  type            String
+  statut          String   @default("Disponible")
+  transactionType String
   localisation    String
   superficie      Float
   pieces          Int
@@ -21,20 +21,20 @@ model Bien {
 
   // Vente: vendeur vend → acheteur achète
   vendeurId       String?
-  vendeur         Client?  @relation("BienVendeur",   fields: [vendeurId],   references: [id])
+  vendeur         Client?  @relation("BienVendeur",   fields: [vendeurId],   references: [id], onDelete: SetNull)
   acheteurId      String?
-  acheteur        Client?  @relation("BienAcheteur",  fields: [acheteurId],  references: [id])
+  acheteur        Client?  @relation("BienAcheteur",  fields: [acheteurId],  references: [id], onDelete: SetNull)
 
   // Location: bailleur loue → locataire prend
   bailleurId      String?
-  bailleur        Client?  @relation("BienBailleur",  fields: [bailleurId],  references: [id])
+  bailleur        Client?  @relation("BienBailleur",  fields: [bailleurId],  references: [id], onDelete: SetNull)
   locataireId     String?
-  locataire       Client?  @relation("BienLocataire", fields: [locataireId], references: [id])
+  locataire       Client?  @relation("BienLocataire", fields: [locataireId], references: [id], onDelete: SetNull)
 
-  documents    Document[]
-  visites      Visite[]
-  offres       Offre[]
-  transactions Transaction[]
+  documents    Document[]    @relation
+  visites      Visite[]      @relation
+  offres       Offre[]       @relation
+  transactions Transaction[] @relation
 }
 
 model Client {
@@ -44,14 +44,13 @@ model Client {
   cin         String?  @unique
   telephone   String
   email       String?
-  type        String   // Vendeur, Acheteur, Locataire, Bailleur
-  budget      Float?   // budget max pour Acheteur / loyer max pour Locataire
-  commission  Float?   // taux commission agence pour Vendeur / Bailleur
+  type        String
+  budget      Float?
+  commission  Float?
   statut      String   @default("Nouveau contact")
   criteres    String?
   createdAt   DateTime @default(now())
 
-  // Biens liés selon le rôle
   biensAVendre   Bien[] @relation("BienVendeur")
   biensAchetes   Bien[] @relation("BienAcheteur")
   biensALouer    Bien[] @relation("BienBailleur")
@@ -76,31 +75,31 @@ model Agent {
 model Visite {
   id      String   @id @default(uuid())
   date    DateTime
-  retour  String?  // Intéressé, Pas intéressé, Veut négocier
+  retour  String?
 
   bienId   String
-  bien     Bien    @relation(fields: [bienId],   references: [id])
+  bien     Bien    @relation(fields: [bienId],   references: [id], onDelete: Cascade)
   clientId String
-  client   Client  @relation(fields: [clientId], references: [id])
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   agentId  String?
-  agent    Agent?  @relation(fields: [agentId],  references: [id])
+  agent    Agent?  @relation(fields: [agentId],  references: [id], onDelete: SetNull)
 }
 
 model Offre {
   id        String   @id @default(uuid())
   montant   Float
-  statut    String   @default("En cours") // En cours, Acceptée, Refusée
+  statut    String   @default("En cours")
   createdAt DateTime @default(now())
 
   bienId   String
-  bien     Bien   @relation(fields: [bienId],   references: [id])
+  bien     Bien   @relation(fields: [bienId],   references: [id], onDelete: Cascade)
   clientId String
-  client   Client @relation(fields: [clientId], references: [id])
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model Transaction {
   id            String    @id @default(uuid())
-  type          String    // Vente, Location
+  type          String
   prixFinal     Float
   commission    Float
   dateSignature DateTime?
@@ -108,9 +107,9 @@ model Transaction {
   createdAt     DateTime  @default(now())
 
   bienId   String
-  bien     Bien   @relation(fields: [bienId],   references: [id])
+  bien     Bien   @relation(fields: [bienId],   references: [id], onDelete: Cascade)
   clientId String
-  client   Client @relation(fields: [clientId], references: [id])
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model BienType {
@@ -125,7 +124,7 @@ model Document {
   createdAt DateTime @default(now())
 
   bienId   String?
-  bien     Bien?   @relation(fields: [bienId],   references: [id])
+  bien     Bien?   @relation(fields: [bienId],   references: [id], onDelete: SetNull)
   clientId String?
-  client   Client? @relation(fields: [clientId], references: [id])
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 }
