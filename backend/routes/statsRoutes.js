@@ -2,7 +2,7 @@ const express = require('express');
 const { getStats, getFinances } = require('../controllers/statsController');
 const router = express.Router();
 
-router.get('/',         protect, getStats);
-router.get('/finances', protect, getFinances);
+router.get('/',         getStats);
+router.get('/finances', getFinances);
 
 module.exports = router;

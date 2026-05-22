@@ -45,7 +45,7 @@ export default function Dashboard() {
     <div className="page-content">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{greeting}, {agent.nom?.split(' ')[0] || 'Agent'}</h1>
+          <h1 className="page-title">{greeting}, CB Immobilier</h1>
           <p className="page-subtitle">Voici le résumé de l'activité de l'agence aujourd'hui.</p>
         </div>
       </div>

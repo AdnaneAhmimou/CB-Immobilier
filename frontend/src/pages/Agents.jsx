@@ -69,7 +69,7 @@ export default function Agents() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--spacing-md)' }}>
           {filtered.map((agent, i) => {
-            const isMe    = agent.id === me.id;
+            const isMe    = false;
             const bgColor = AVATAR_COLORS[i % AVATAR_COLORS.length];
             const visites = agent._count?.visites ?? 0;
             return (

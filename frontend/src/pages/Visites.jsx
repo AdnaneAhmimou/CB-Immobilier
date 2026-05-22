@@ -22,7 +22,6 @@ export default function Visites() {
   const [search, setSearch]       = useState('');
   const [formData, setFormData]   = useState(EMPTY_FORM);
 
-  const agent  = JSON.parse(localStorage.getItem('agent') || '{}');
 
   useEffect(() => {
     fetchVisites();
@@ -70,7 +69,7 @@ export default function Visites() {
       await fetch('http://localhost:3000/api/visites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, agentId: agent.id }),
+        body: JSON.stringify({ ...formData }),
       });
     }
     closeModal();

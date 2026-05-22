@@ -88,7 +88,7 @@ export default function Matching() {
     await fetch('http://localhost:3000/api/visites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bienId: visiteBien.id, clientId: selected.id, date: visiteDate, retour: 'En attente', agentId: agent.id }),
+      body: JSON.stringify({ bienId: visiteBien.id, clientId: selected.id, date: visiteDate, retour: 'En attente' }),
     });
     setIsVisiteModal(false);
   };
