@@ -42,8 +42,6 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [detailBien, setDetailBien]             = useState(null);
   const [photoIndex, setPhotoIndex]             = useState(0);
 
-  const token   = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
 
   // Sync tab when navigating between /biens/vente and /biens/location
   useEffect(() => { setTab(defaultTab); }, [defaultTab]);
@@ -55,17 +53,17 @@ export default function Biens({ defaultTab = 'vente' }) {
   }, []);
 
   const fetchCustomTypes = async () => {
-    const res = await fetch('http://localhost:3000/api/bien-types', { headers });
+    const res = await fetch('http://localhost:3000/api/bien-types');
     if (res.ok) setCustomTypes(await res.json());
   };
 
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens', { headers });
+    const res = await fetch('http://localhost:3000/api/biens');
     if (res.ok) setBiens(await res.json());
   };
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients', { headers });
+    const res = await fetch('http://localhost:3000/api/clients');
     if (!res.ok) return;
     const data = await res.json();
     setVendeurs(data.filter(c => c.type === 'Vendeur'));
@@ -117,7 +115,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     if (!PREDEFINED_TYPES.includes(formData.type) && formData.type.trim()) {
       await fetch('http://localhost:3000/api/bien-types', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: formData.type.trim() }),
       });
       fetchCustomTypes();
@@ -126,7 +124,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     const method = editBienId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),
     });
     setIsModalOpen(false);
@@ -150,7 +148,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     // Create transaction (controller also updates bien status)
     await fetch('http://localhost:3000/api/transactions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         bienId:        selectedBien.id,
         clientId:      dealBuyerId,
@@ -186,7 +184,7 @@ export default function Biens({ defaultTab = 'vente' }) {
       form.append('file',   file);
       form.append('bienId', selectedBien.id);
       form.append('nom',    name || file.name);
-      return fetch('http://localhost:3000/api/documents/upload', { method: 'POST', headers, body: form });
+      return fetch('http://localhost:3000/api/documents/upload', { method: 'POST', body: form });
     }));
     setUploading(false);
     setIsUploadModalOpen(false);
@@ -196,7 +194,7 @@ export default function Biens({ defaultTab = 'vente' }) {
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce bien ?')) return;
-    await fetch(`http://localhost:3000/api/biens/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/biens/${id}`, { method: 'DELETE' });
     fetchBiens();
   };
 

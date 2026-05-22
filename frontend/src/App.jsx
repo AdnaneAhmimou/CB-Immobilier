@@ -1,7 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import Login from './pages/Login';
-import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Biens from './pages/Biens';
@@ -13,48 +11,34 @@ import Documents from './pages/Documents';
 import Finances from './pages/Finances';
 import Agents from './pages/Agents';
 
-function PrivateRoute({ element }) {
-  return localStorage.getItem('token') ? element : <Navigate to="/login" replace />;
-}
-
 function App() {
-  const auth = !!localStorage.getItem('token');
-
   return (
     <BrowserRouter>
-      <div className={auth ? 'app-container' : ''}>
-        {auth && <Sidebar />}
-        <div className={auth ? 'main-content' : ''}>
+      <div className="app-container">
+        <Sidebar />
+        <div className="main-content">
           <Routes>
-            {/* Public */}
-            <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<Dashboard />} />
 
-            {/* Dashboard */}
-            <Route path="/" element={<PrivateRoute element={<Dashboard />} />} />
-
-            {/* Biens — split by transaction type */}
             <Route path="/biens"          element={<Navigate to="/biens/vente" replace />} />
-            <Route path="/biens/vente"    element={<PrivateRoute element={<Biens defaultTab="vente" />} />} />
-            <Route path="/biens/location" element={<PrivateRoute element={<Biens defaultTab="location" />} />} />
+            <Route path="/biens/vente"    element={<Biens defaultTab="vente" />} />
+            <Route path="/biens/location" element={<Biens defaultTab="location" />} />
 
-            {/* Clients — filtrable par type */}
-            <Route path="/clients"    element={<PrivateRoute element={<Clients filter="All"       />} />} />
-            <Route path="/acheteurs"  element={<PrivateRoute element={<Clients filter="Acheteur"  />} />} />
-            <Route path="/locataires" element={<PrivateRoute element={<Clients filter="Locataire" />} />} />
-            <Route path="/vendeurs"   element={<PrivateRoute element={<Clients filter="Vendeur"   />} />} />
-            <Route path="/bailleurs"  element={<PrivateRoute element={<Clients filter="Bailleur"  />} />} />
+            <Route path="/clients"    element={<Clients filter="All"       />} />
+            <Route path="/acheteurs"  element={<Clients filter="Acheteur"  />} />
+            <Route path="/locataires" element={<Clients filter="Locataire" />} />
+            <Route path="/vendeurs"   element={<Clients filter="Vendeur"   />} />
+            <Route path="/bailleurs"  element={<Clients filter="Bailleur"  />} />
 
-            {/* Matching */}
-            <Route path="/matching"   element={<PrivateRoute element={<Matching />}   />} />
-            <Route path="/documents"  element={<PrivateRoute element={<Documents />}  />} />
-            <Route path="/finances"   element={<PrivateRoute element={<Finances />}   />} />
-            <Route path="/agents"     element={<PrivateRoute element={<Agents />}     />} />
+            <Route path="/matching"      element={<Matching />}      />
+            <Route path="/documents"     element={<Documents />}     />
+            <Route path="/finances"      element={<Finances />}      />
+            <Route path="/agents"        element={<Agents />}        />
+            <Route path="/visites"       element={<Visites />}       />
+            <Route path="/offres"        element={<Offres />}        />
+            <Route path="/transactions"  element={<Transactions />}  />
 
-            {/* Activité */}
-            <Route path="/visites"      element={<PrivateRoute element={<Visites />}      />} />
-            <Route path="/offres"       element={<PrivateRoute element={<Offres />}       />} />
-            <Route path="/transactions" element={<PrivateRoute element={<Transactions />} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>

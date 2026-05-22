@@ -52,14 +52,10 @@ export default function Matching() {
   const [visiteBien, setVisiteBien]   = useState(null);
   const [visiteDate, setVisiteDate]   = useState('');
 
-  const token   = localStorage.getItem('token');
-  const agent   = JSON.parse(localStorage.getItem('agent') || '{}');
-  const headers = { Authorization: `Bearer ${token}` };
-
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:3000/api/clients', { headers }).then(r => r.json()),
-      fetch('http://localhost:3000/api/biens',   { headers }).then(r => r.json()),
+      fetch('http://localhost:3000/api/clients').then(r => r.json()),
+      fetch('http://localhost:3000/api/biens').then(r => r.json()),
     ]).then(([c, b]) => {
       setClients(c.filter(x => x.type === 'Acheteur' || x.type === 'Locataire'));
       setBiens(b);
@@ -91,7 +87,7 @@ export default function Matching() {
     e.preventDefault();
     await fetch('http://localhost:3000/api/visites', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bienId: visiteBien.id, clientId: selected.id, date: visiteDate, retour: 'En attente', agentId: agent.id }),
     });
     setIsVisiteModal(false);

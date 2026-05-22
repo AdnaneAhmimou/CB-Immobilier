@@ -30,15 +30,13 @@ function formatDate(dateStr) {
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const agent = JSON.parse(localStorage.getItem('agent') || '{}');
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/stats', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('http://localhost:3000/api/stats')
       .then(r => r.json())
       .then(data => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';

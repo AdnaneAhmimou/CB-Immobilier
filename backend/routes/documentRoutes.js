@@ -1,11 +1,10 @@
 
 const express = require('express');
 const documentController = require('../controllers/documentController');
-const authMiddleware = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
-router.use(authMiddleware.protect);
+
 
 router.route('/')
     .get(documentController.getAllDocuments);

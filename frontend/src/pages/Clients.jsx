@@ -44,8 +44,6 @@ export default function Clients({ filter = 'All' }) {
   const [editId, setEditId]         = useState(null);
   const [search, setSearch]         = useState('');
   const [formData, setFormData]     = useState({ ...EMPTY_FORM, type: filter !== 'All' ? filter : 'Acheteur' });
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => { fetchClients(); }, []);
 
@@ -53,7 +51,7 @@ export default function Clients({ filter = 'All' }) {
   useEffect(() => { setSearch(''); }, [filter]);
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients', { headers });
+    const res = await fetch('http://localhost:3000/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -76,7 +74,7 @@ export default function Clients({ filter = 'All' }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce client ?')) return;
-    await fetch(`http://localhost:3000/api/clients/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/clients/${id}`, { method: 'DELETE' });
     fetchClients();
   };
 
@@ -86,7 +84,7 @@ export default function Clients({ filter = 'All' }) {
     const method = editId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),
     });
     setIsModalOpen(false);

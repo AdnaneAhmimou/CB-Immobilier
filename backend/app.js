@@ -3,7 +3,6 @@ const cors = require('cors');
 const path = require('path');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
-const authRoutes = require('./routes/authRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const bienRoutes = require('./routes/bienRoutes');
 const documentRoutes = require('./routes/documentRoutes');
@@ -21,7 +20,6 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/biens', bienRoutes);
 app.use('/api/documents', documentRoutes);

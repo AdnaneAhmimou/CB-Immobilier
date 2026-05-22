@@ -15,14 +15,10 @@ export default function Agents() {
   const [editAgent, setEditAgent]   = useState(null);
   const [formData, setFormData]     = useState({ nom: '', telephone: '', email: '' });
 
-  const token   = localStorage.getItem('token');
-  const me      = JSON.parse(localStorage.getItem('agent') || '{}');
-  const headers = { Authorization: `Bearer ${token}` };
-
   useEffect(() => { fetchAgents(); }, []);
 
   const fetchAgents = () => {
-    fetch('http://localhost:3000/api/agents', { headers })
+    fetch('http://localhost:3000/api/agents')
       .then(r => r.json())
       .then(setAgents);
   };
@@ -36,13 +32,9 @@ export default function Agents() {
     e.preventDefault();
     await fetch(`http://localhost:3000/api/agents/${editAgent.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),
     });
-    // If the edited agent is the current user, update localStorage
-    if (editAgent.id === me.id) {
-      localStorage.setItem('agent', JSON.stringify({ ...me, nom: formData.nom, email: formData.email }));
-    }
     setEditAgent(null);
     fetchAgents();
   };

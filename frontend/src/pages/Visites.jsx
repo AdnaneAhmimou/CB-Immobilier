@@ -22,9 +22,7 @@ export default function Visites() {
   const [search, setSearch]       = useState('');
   const [formData, setFormData]   = useState(EMPTY_FORM);
 
-  const token  = localStorage.getItem('token');
   const agent  = JSON.parse(localStorage.getItem('agent') || '{}');
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     fetchVisites();
@@ -33,15 +31,15 @@ export default function Visites() {
   }, []);
 
   const fetchVisites = async () => {
-    const res = await fetch('http://localhost:3000/api/visites', { headers });
+    const res = await fetch('http://localhost:3000/api/visites');
     if (res.ok) setVisites(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens', { headers });
+    const res = await fetch('http://localhost:3000/api/biens');
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients', { headers });
+    const res = await fetch('http://localhost:3000/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -65,13 +63,13 @@ export default function Visites() {
     if (editId) {
       await fetch(`http://localhost:3000/api/visites/${editId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     } else {
       await fetch('http://localhost:3000/api/visites', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, agentId: agent.id }),
       });
     }
@@ -81,14 +79,14 @@ export default function Visites() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette visite ?')) return;
-    await fetch(`http://localhost:3000/api/visites/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/visites/${id}`, { method: 'DELETE' });
     fetchVisites();
   };
 
   const handleUpdateRetour = async (id, retour) => {
     await fetch(`http://localhost:3000/api/visites/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ retour }),
     });
     fetchVisites();

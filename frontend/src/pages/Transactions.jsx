@@ -12,8 +12,6 @@ export default function Transactions() {
   const [search, setSearch]             = useState('');
   const [formData, setFormData]         = useState(EMPTY_FORM);
 
-  const token   = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     fetchTransactions();
@@ -22,15 +20,15 @@ export default function Transactions() {
   }, []);
 
   const fetchTransactions = async () => {
-    const res = await fetch('http://localhost:3000/api/transactions', { headers });
+    const res = await fetch('http://localhost:3000/api/transactions');
     if (res.ok) setTransactions(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens', { headers });
+    const res = await fetch('http://localhost:3000/api/biens');
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients', { headers });
+    const res = await fetch('http://localhost:3000/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -68,13 +66,13 @@ export default function Transactions() {
     if (editId) {
       await fetch(`http://localhost:3000/api/transactions/${editId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: formData.type, prixFinal: formData.prixFinal, dateSignature: formData.dateSignature, notes: formData.notes }),
       });
     } else {
       await fetch('http://localhost:3000/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     }
@@ -84,7 +82,7 @@ export default function Transactions() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette transaction ?')) return;
-    await fetch(`http://localhost:3000/api/transactions/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/transactions/${id}`, { method: 'DELETE' });
     fetchTransactions();
   };
 

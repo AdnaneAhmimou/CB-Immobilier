@@ -29,24 +29,20 @@ export default function Documents() {
   const [uploadBienId, setUploadBienId]     = useState('');
   const [uploadClientId, setUploadClientId] = useState('');
 
-  const token   = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
     fetchDocs();
-    fetch('http://localhost:3000/api/biens',   { headers }).then(r => r.json()).then(setBiens);
-    fetch('http://localhost:3000/api/clients', { headers }).then(r => r.json()).then(setClients);
   }, []);
 
   const fetchDocs = () => {
-    fetch('http://localhost:3000/api/documents', { headers })
+    fetch('http://localhost:3000/api/documents')
       .then(r => r.json())
       .then(setDocs);
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE' });
     fetchDocs();
   };
 
@@ -58,7 +54,7 @@ export default function Documents() {
     form.append('nom', uploadName || uploadFile.name);
     if (uploadBienId)   form.append('bienId',   uploadBienId);
     if (uploadClientId) form.append('clientId', uploadClientId);
-    await fetch('http://localhost:3000/api/documents/upload', { method: 'POST', headers, body: form });
+    await fetch('http://localhost:3000/api/documents/upload', { method: 'POST', body: form });
     setIsModalOpen(false);
     setUploadFile(null);
     setUploadName('');

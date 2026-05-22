@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShoppingBag, Home,
-  UserSearch, User, CalendarClock, TrendingUp, Receipt, LogOut, Shuffle, FolderOpen, BarChart2, UserCog,
+  UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
 } from 'lucide-react';
 import logo from '../assets/cb_immobilier_logo.jpeg';
 
@@ -49,16 +49,6 @@ const sections = [
 ];
 
 function Sidebar() {
-  const agent = JSON.parse(localStorage.getItem('agent') || '{}');
-  const initials = agent.nom
-    ? agent.nom.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'AG';
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('agent');
-    window.location.href = '/login';
-  };
 
   return (
     <aside className="sidebar">
@@ -93,14 +83,11 @@ function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="sidebar-agent">
-          <div className="sidebar-agent-avatar">{initials}</div>
+          <div className="sidebar-agent-avatar">CB</div>
           <div className="sidebar-agent-info">
-            <div className="sidebar-agent-name">{agent.nom || 'Agent'}</div>
+            <div className="sidebar-agent-name">CB Immobilier</div>
             <div className="sidebar-agent-role">Agent Immobilier</div>
           </div>
-          <button className="sidebar-logout-btn" onClick={handleLogout} title="Déconnexion">
-            <LogOut size={15} />
-          </button>
         </div>
       </div>
     </aside>

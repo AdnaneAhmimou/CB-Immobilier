@@ -22,14 +22,13 @@ function fmt(n) {
 export default function Finances() {
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/stats/finances', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('http://localhost:3000/api/stats/finances')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   if (loading) return <div className="page-content" style={{ color: 'var(--color-muted)', fontSize: 14, paddingTop: 40 }}>Chargement…</div>;
 

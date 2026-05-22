@@ -18,8 +18,6 @@ export default function Offres() {
   const [search, setSearch]       = useState('');
   const [formData, setFormData]   = useState(EMPTY_FORM);
 
-  const token    = localStorage.getItem('token');
-  const headers  = { Authorization: `Bearer ${token}` };
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,15 +27,15 @@ export default function Offres() {
   }, []);
 
   const fetchOffres = async () => {
-    const res = await fetch('http://localhost:3000/api/offres', { headers });
+    const res = await fetch('http://localhost:3000/api/offres');
     if (res.ok) setOffres(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens', { headers });
+    const res = await fetch('http://localhost:3000/api/biens');
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients', { headers });
+    const res = await fetch('http://localhost:3000/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -60,13 +58,13 @@ export default function Offres() {
     if (editId) {
       await fetch(`http://localhost:3000/api/offres/${editId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     } else {
       await fetch('http://localhost:3000/api/offres', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     }
@@ -78,7 +76,7 @@ export default function Offres() {
     if (!window.confirm(`Créer une transaction pour ${o.bien?.type} — ${o.bien?.localisation} à ${o.montant?.toLocaleString('fr-FR')} MAD ?`)) return;
     await fetch('http://localhost:3000/api/transactions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         bienId: o.bienId,
         clientId: o.clientId,
@@ -92,14 +90,14 @@ export default function Offres() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette offre ?')) return;
-    await fetch(`http://localhost:3000/api/offres/${id}`, { method: 'DELETE', headers });
+    await fetch(`http://localhost:3000/api/offres/${id}`, { method: 'DELETE' });
     fetchOffres();
   };
 
   const handleUpdateStatut = async (id, statut) => {
     await fetch(`http://localhost:3000/api/offres/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statut }),
     });
     fetchOffres();
