@@ -7,8 +7,17 @@ echo.
 cd /d "%~dp0backend"
 
 if not exist "node_modules" (
-    echo [INFO] Installation des dependances backend...
+    echo [1/3] Installation des dependances...
     npm install
+    echo.
+    echo [2/3] Generation du client Prisma...
+    call npx prisma generate
+    echo.
+    echo [3/3] Initialisation de la base de donnees...
+    call npx prisma db push
+    echo.
+) else (
+    echo [INFO] Dependances deja installees.
     echo.
 )
 
