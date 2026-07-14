@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2 } from 'lucide-react';
+import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2, Loader2 } from 'lucide-react';
 
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
 const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
@@ -45,6 +45,8 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [dealBuyerId, setDealBuyerId]           = useState('');
   const [uploadFiles, setUploadFiles]           = useState([]);  // [{file, name}]
   const [uploading, setUploading]               = useState(false);
+  const [uploadProgress, setUploadProgress]     = useState(0);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
   const [search, setSearch]                     = useState('');
   const [detailBien, setDetailBien]             = useState(null);
   const [photoIndex, setPhotoIndex]             = useState(0);
@@ -195,7 +197,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   };
 
   // ── Upload ──────────────────────────────────────────────────
-  const openUpload = (bien) => { setSelectedBien(bien); setUploadFiles([]); setIsUploadModalOpen(true); };
+  const openUpload = (bien) => { setSelectedBien(bien); setUploadFiles([]); setUploadSuccessMsg(''); setIsUploadModalOpen(true); };
 
   const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
@@ -207,18 +209,47 @@ export default function Biens({ defaultTab = 'vente' }) {
 
   const updateUploadName = (idx, name) => setUploadFiles(prev => prev.map((f, i) => i === idx ? { ...f, name } : f));
 
+  // Plain fetch() gives no upload progress, so large videos look frozen — use XHR instead.
+  const uploadOne = (file, name, bienId, onProgress) => new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append('file',   file);
+    form.append('bienId', bienId);
+    form.append('nom',    name || file.name);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'http://localhost:3001/api/documents/upload');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`Upload failed (${xhr.status})`));
+    xhr.onerror = () => reject(new Error('Upload failed'));
+    xhr.send(form);
+  });
+
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!uploadFiles.length || !selectedBien) return;
     setUploading(true);
-    await Promise.all(uploadFiles.map(({ file, name }) => {
-      const form = new FormData();
-      form.append('file',   file);
-      form.append('bienId', selectedBien.id);
-      form.append('nom',    name || file.name);
-      return fetch('http://localhost:3001/api/documents/upload', { method: 'POST', body: form });
-    }));
+    setUploadSuccessMsg('');
+    const progressByFile = uploadFiles.map(() => 0);
+    const reportProgress = (idx, fraction) => {
+      progressByFile[idx] = fraction;
+      const total = progressByFile.reduce((a, b) => a + b, 0) / progressByFile.length;
+      setUploadProgress(Math.round(total * 100));
+    };
+
+    const count = uploadFiles.length;
+    try {
+      await Promise.all(uploadFiles.map(({ file, name }, idx) =>
+        uploadOne(file, name, selectedBien.id, (fraction) => reportProgress(idx, fraction))
+      ));
+      setUploadSuccessMsg(count > 1 ? `${count} fichiers ajoutés` : 'Fichier ajouté');
+      setTimeout(() => setUploadSuccessMsg(''), 3000);
+    } catch (err) {
+      alert(`Échec de l'envoi : ${err.message}`);
+    }
     setUploading(false);
+    setUploadProgress(0);
     setUploadFiles([]);
     const data = await fetchBiens();
     refreshBienRefs(data, selectedBien.id);
@@ -713,6 +744,12 @@ export default function Biens({ defaultTab = 'vente' }) {
                   {selectedBien.type} — {selectedBien.localisation}
                 </div>
 
+                {uploadSuccessMsg && (
+                  <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CheckCircle size={16} /> {uploadSuccessMsg}
+                  </div>
+                )}
+
                 {/* Existing media */}
                 {(existingPhotos.length > 0 || existingVideos.length > 0 || existingDocs.length > 0) && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -789,11 +826,23 @@ export default function Biens({ defaultTab = 'vente' }) {
                   </div>
                 )}
               </div>
+              {uploading && (
+                <div style={{ padding: '0 24px 12px' }}>
+                  <div style={{ height: 6, borderRadius: 3, background: 'var(--color-surface-soft)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${uploadProgress}%`, background: 'var(--color-primary)', transition: 'width 0.15s' }} />
+                  </div>
+                </div>
+              )}
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsUploadModalOpen(false)}>Annuler</button>
-                <button type="submit" className="btn btn-primary" disabled={!uploadFiles.length || uploading}>
-                  <FileUp size={16} />
-                  {uploading ? 'Envoi…' : `Téléverser ${uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}`}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!uploadFiles.length || uploading}
+                  style={uploading ? { background: 'var(--color-primary)', cursor: 'progress' } : undefined}
+                >
+                  {uploading ? <Loader2 size={16} className="spin" /> : <FileUp size={16} />}
+                  {uploading ? `Envoi… ${uploadProgress}%` : `Téléverser ${uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}`}
                 </button>
               </div>
             </form>
