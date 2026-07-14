@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2 } from 'lucide-react';
 
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
+const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
+
+const byName = (a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+
+const getPhotos = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(d.filePath)).sort(byName);
+const getVideos = (bien) => (bien?.documents || []).filter(d => VIDEO_EXTS.test(d.filePath)).sort(byName);
+const getDocs   = (bien) => (bien?.documents || []).filter(d => !IMAGE_EXTS.test(d.filePath) && !VIDEO_EXTS.test(d.filePath)).sort(byName);
 
 const STATUT_BADGE = {
   'Disponible': 'badge-green',
@@ -41,6 +48,20 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [search, setSearch]                     = useState('');
   const [detailBien, setDetailBien]             = useState(null);
   const [photoIndex, setPhotoIndex]             = useState(0);
+  const [isFullscreen, setIsFullscreen]         = useState(false);
+
+  // Fullscreen viewer keyboard controls
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e) => {
+      const count = getPhotos(detailBien).length;
+      if (e.key === 'Escape') setIsFullscreen(false);
+      if (e.key === 'ArrowLeft') setPhotoIndex(i => (i - 1 + count) % count);
+      if (e.key === 'ArrowRight') setPhotoIndex(i => (i + 1) % count);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFullscreen, detailBien]);
 
 
   // Sync tab when navigating between /biens/vente and /biens/location
@@ -53,17 +74,28 @@ export default function Biens({ defaultTab = 'vente' }) {
   }, []);
 
   const fetchCustomTypes = async () => {
-    const res = await fetch('http://localhost:3000/api/bien-types');
+    const res = await fetch('http://localhost:3001/api/bien-types');
     if (res.ok) setCustomTypes(await res.json());
   };
 
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens');
-    if (res.ok) setBiens(await res.json());
+    const res = await fetch('http://localhost:3001/api/biens');
+    if (!res.ok) return [];
+    const data = await res.json();
+    setBiens(data);
+    return data;
+  };
+
+  // Re-sync selectedBien / detailBien with fresh data after a media change
+  const refreshBienRefs = (data, bienId) => {
+    const updated = data.find(b => b.id === bienId);
+    if (!updated) return;
+    setSelectedBien(prev => (prev?.id === bienId ? updated : prev));
+    setDetailBien(prev => (prev?.id === bienId ? updated : prev));
   };
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients');
+    const res = await fetch('http://localhost:3001/api/clients');
     if (!res.ok) return;
     const data = await res.json();
     setVendeurs(data.filter(c => c.type === 'Vendeur'));
@@ -113,14 +145,14 @@ export default function Biens({ defaultTab = 'vente' }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!PREDEFINED_TYPES.includes(formData.type) && formData.type.trim()) {
-      await fetch('http://localhost:3000/api/bien-types', {
+      await fetch('http://localhost:3001/api/bien-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: formData.type.trim() }),
       });
       fetchCustomTypes();
     }
-    const url    = editBienId ? `http://localhost:3000/api/biens/${editBienId}` : 'http://localhost:3000/api/biens';
+    const url    = editBienId ? `http://localhost:3001/api/biens/${editBienId}` : 'http://localhost:3001/api/biens';
     const method = editBienId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,
@@ -146,7 +178,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     const commission = owner?.commission ?? 3;
 
     // Create transaction (controller also updates bien status)
-    await fetch('http://localhost:3000/api/transactions', {
+    await fetch('http://localhost:3001/api/transactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -184,22 +216,29 @@ export default function Biens({ defaultTab = 'vente' }) {
       form.append('file',   file);
       form.append('bienId', selectedBien.id);
       form.append('nom',    name || file.name);
-      return fetch('http://localhost:3000/api/documents/upload', { method: 'POST', body: form });
+      return fetch('http://localhost:3001/api/documents/upload', { method: 'POST', body: form });
     }));
     setUploading(false);
-    setIsUploadModalOpen(false);
     setUploadFiles([]);
-    fetchBiens();
+    const data = await fetchBiens();
+    refreshBienRefs(data, selectedBien.id);
+  };
+
+  const handleDeleteDocument = async (docId, bienId) => {
+    if (!confirm('Supprimer ce fichier ?')) return;
+    await fetch(`http://localhost:3001/api/documents/${docId}`, { method: 'DELETE' });
+    const data = await fetchBiens();
+    refreshBienRefs(data, bienId);
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce bien ?')) return;
-    await fetch(`http://localhost:3000/api/biens/${id}`, { method: 'DELETE' });
+    await fetch(`http://localhost:3001/api/biens/${id}`, { method: 'DELETE' });
     fetchBiens();
   };
 
-  const openDetail = (bien) => { setDetailBien(bien); setPhotoIndex(0); };
-  const closeDetail = () => setDetailBien(null);
+  const openDetail = (bien) => { setDetailBien(bien); setPhotoIndex(0); setIsFullscreen(false); };
+  const closeDetail = () => { setDetailBien(null); setIsFullscreen(false); };
 
   const set = (field) => (e) => setFormData({ ...formData, [field]: e.target.value });
 
@@ -272,11 +311,12 @@ export default function Biens({ defaultTab = 'vente' }) {
             const owner  = isVente ? bien.vendeur  : bien.bailleur;
             const buyer  = isVente ? bien.acheteur : bien.locataire;
             const closed = ['Vendu', 'Loué'].includes(bien.statut);
+            const cover  = getPhotos(bien)[0];
             return (
               <div key={bien.id} className="bien-card">
                 <div className="bien-card-photo">
-                  {bien.documents?.[0]
-                    ? <img src={`http://localhost:3000${bien.documents[0].filePath}`} alt="Bien" />
+                  {cover
+                    ? <img src={`http://localhost:3001${cover.filePath}`} alt="Bien" />
                     : <Building2 size={48} className="bien-card-photo-icon" />}
                   <div className="bien-card-badges">
                     <Badge statut={bien.statut} />
@@ -464,12 +504,15 @@ export default function Biens({ defaultTab = 'vente' }) {
 
       {/* ── Detail Modal ── */}
       {detailBien && (() => {
-        const photos = (detailBien.documents || []).filter(d => IMAGE_EXTS.test(d.filePath));
-        const docs   = (detailBien.documents || []).filter(d => !IMAGE_EXTS.test(d.filePath));
-        const photo  = photos[photoIndex];
+        const photos = getPhotos(detailBien);
+        const videos = getVideos(detailBien);
+        const docs   = getDocs(detailBien);
+        const safeIndex = Math.min(photoIndex, Math.max(photos.length - 1, 0));
+        const photo  = photos[safeIndex];
         const dOwner = detailBien.transactionType === 'Vente' ? detailBien.vendeur : detailBien.bailleur;
         const dBuyer = detailBien.transactionType === 'Vente' ? detailBien.acheteur : detailBien.locataire;
         return (
+          <>
           <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeDetail()}>
             <div className="modal" style={{ maxWidth: 760, width: '95vw', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div className="modal-header">
@@ -482,10 +525,21 @@ export default function Biens({ defaultTab = 'vente' }) {
                 {photos.length > 0 ? (
                   <div style={{ position: 'relative', background: '#000', height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img
-                      src={`http://localhost:3000${photo.filePath}`}
+                      src={`http://localhost:3001${photo.filePath}`}
                       alt={photo.nom}
-                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                      onClick={() => setIsFullscreen(true)}
+                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
                     />
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      title="Voir en plein écran"
+                      style={{ position: 'absolute', right: 52, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                    ><Maximize2 size={15} /></button>
+                    <button
+                      onClick={() => handleDeleteDocument(photo.id, detailBien.id)}
+                      title="Supprimer cette photo"
+                      style={{ position: 'absolute', right: 12, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                    ><Trash2 size={15} /></button>
                     {photos.length > 1 && (
                       <>
                         <button
@@ -497,7 +551,7 @@ export default function Biens({ defaultTab = 'vente' }) {
                           style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                         ><ChevronRight size={20} /></button>
                         <div style={{ position: 'absolute', bottom: 10, right: 14, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 12, borderRadius: 12, padding: '2px 10px' }}>
-                          {photoIndex + 1} / {photos.length}
+                          {safeIndex + 1} / {photos.length}
                         </div>
                       </>
                     )}
@@ -507,10 +561,10 @@ export default function Biens({ defaultTab = 'vente' }) {
                         {photos.map((p, i) => (
                           <img
                             key={p.id}
-                            src={`http://localhost:3000${p.filePath}`}
+                            src={`http://localhost:3001${p.filePath}`}
                             alt=""
                             onClick={() => setPhotoIndex(i)}
-                            style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: i === photoIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0 }}
+                            style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0 }}
                           />
                         ))}
                       </div>
@@ -542,23 +596,47 @@ export default function Biens({ defaultTab = 'vente' }) {
                   ))}
                 </div>
 
+                {/* Videos */}
+                {videos.length > 0 && (
+                  <div style={{ padding: '0 24px 20px' }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Vidéos</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {videos.map(v => (
+                        <div key={v.id} style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--rounded-sm)', overflow: 'hidden' }}>
+                          <video src={`http://localhost:3001${v.filePath}`} controls style={{ width: '100%', maxHeight: 260, display: 'block', background: '#000' }} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px' }}>
+                            <span style={{ flex: 1, fontSize: 13 }}>{v.nom}</span>
+                            <button type="button" onClick={() => handleDeleteDocument(v.id, detailBien.id)} title="Supprimer cette vidéo" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Documents */}
                 {docs.length > 0 && (
                   <div style={{ padding: '0 24px 20px' }}>
                     <div style={{ fontSize: 12, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Documents</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {docs.map(d => (
-                        <a
-                          key={d.id}
-                          href={`http://localhost:3000${d.filePath}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)', color: 'var(--color-ink)', textDecoration: 'none', fontSize: 13 }}
-                        >
-                          <Download size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
-                          <span style={{ flex: 1 }}>{d.nom}</span>
-                        </a>
+                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)', fontSize: 13 }}>
+                          <a
+                            href={`http://localhost:3001${d.filePath}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, color: 'var(--color-ink)', textDecoration: 'none' }}
+                          >
+                            <Download size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
+                            <span>{d.nom}</span>
+                          </a>
+                          <button type="button" onClick={() => handleDeleteDocument(d.id, detailBien.id)} title="Supprimer" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -567,21 +645,66 @@ export default function Biens({ defaultTab = 'vente' }) {
 
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={closeDetail}>Fermer</button>
+                <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); openUpload(detailBien); }}>
+                  <FileUp size={14} /> Gérer photos / vidéos
+                </button>
                 <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); closeDetail(); openEdit(detailBien); }}>
                   <Edit2 size={14} /> Modifier
                 </button>
               </div>
             </div>
           </div>
+
+          {/* ── Fullscreen photo viewer ── */}
+          {isFullscreen && photo && (
+            <div
+              onClick={() => setIsFullscreen(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <button
+                onClick={() => setIsFullscreen(false)}
+                title="Fermer"
+                style={{ position: 'absolute', right: 20, top: 20, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+              ><X size={22} /></button>
+
+              <img
+                src={`http://localhost:3001${photo.filePath}`}
+                alt={photo.nom}
+                onClick={e => e.stopPropagation()}
+                style={{ maxHeight: '92vh', maxWidth: '92vw', objectFit: 'contain' }}
+              />
+
+              {photos.length > 1 && (
+                <>
+                  <button
+                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i - 1 + photos.length) % photos.length); }}
+                    style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                  ><ChevronLeft size={24} /></button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i + 1) % photos.length); }}
+                    style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                  ><ChevronRight size={24} /></button>
+                  <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, borderRadius: 12, padding: '4px 14px' }}>
+                    {safeIndex + 1} / {photos.length}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          </>
         );
       })()}
 
-      {/* ── Upload Modal ── */}
-      {isUploadModalOpen && selectedBien && (
+      {/* ── Upload / Media Manager Modal ── */}
+      {isUploadModalOpen && selectedBien && (() => {
+        const existingPhotos = getPhotos(selectedBien);
+        const existingVideos = getVideos(selectedBien);
+        const existingDocs   = getDocs(selectedBien);
+        return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsUploadModalOpen(false)}>
           <div className="modal">
             <div className="modal-header">
-              <h2 className="modal-title">Ajouter des fichiers</h2>
+              <h2 className="modal-title">Photos, vidéos & documents</h2>
               <button className="modal-close" onClick={() => setIsUploadModalOpen(false)}><X size={16} /></button>
             </div>
             <form onSubmit={handleUpload}>
@@ -589,6 +712,44 @@ export default function Biens({ defaultTab = 'vente' }) {
                 <div style={{ fontSize: 13, color: 'var(--color-muted)' }}>
                   {selectedBien.type} — {selectedBien.localisation}
                 </div>
+
+                {/* Existing media */}
+                {(existingPhotos.length > 0 || existingVideos.length > 0 || existingDocs.length > 0) && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fichiers actuels</div>
+                    {existingPhotos.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {existingPhotos.map(p => (
+                          <div key={p.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                            <img src={`http://localhost:3001${p.filePath}`} alt={p.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }} />
+                            <button type="button" onClick={() => handleDeleteDocument(p.id, selectedBien.id)} title="Supprimer"
+                              style={{ position: 'absolute', top: -6, right: -6, background: 'var(--color-danger)', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {existingVideos.map(v => (
+                      <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }}>
+                        <Film size={14} style={{ color: 'var(--color-muted)', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 13 }}>{v.nom}</span>
+                        <button type="button" onClick={() => handleDeleteDocument(v.id, selectedBien.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {existingDocs.map(d => (
+                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }}>
+                        <FileUp size={14} style={{ color: 'var(--color-muted)', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 13 }}>{d.nom}</span>
+                        <button type="button" onClick={() => handleDeleteDocument(d.id, selectedBien.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Drop zone */}
                 <label style={{
@@ -599,10 +760,10 @@ export default function Biens({ defaultTab = 'vente' }) {
                 }}>
                   <FileUp size={24} style={{ color: 'var(--color-muted)' }} />
                   <span style={{ fontSize: 14, color: 'var(--color-muted)' }}>
-                    Cliquer pour sélectionner — photos, PDFs, documents
+                    Cliquer pour ajouter — photos, vidéos, PDFs, documents
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--color-muted-soft)' }}>Plusieurs fichiers autorisés</span>
-                  <input type="file" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
+                  <input type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFileSelect} />
                 </label>
 
                 {/* File list */}
@@ -638,7 +799,8 @@ export default function Biens({ defaultTab = 'vente' }) {
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

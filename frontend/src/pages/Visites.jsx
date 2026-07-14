@@ -30,15 +30,15 @@ export default function Visites() {
   }, []);
 
   const fetchVisites = async () => {
-    const res = await fetch('http://localhost:3000/api/visites');
+    const res = await fetch('http://localhost:3001/api/visites');
     if (res.ok) setVisites(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens');
+    const res = await fetch('http://localhost:3001/api/biens');
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients');
+    const res = await fetch('http://localhost:3001/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -60,13 +60,13 @@ export default function Visites() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editId) {
-      await fetch(`http://localhost:3000/api/visites/${editId}`, {
+      await fetch(`http://localhost:3001/api/visites/${editId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     } else {
-      await fetch('http://localhost:3000/api/visites', {
+      await fetch('http://localhost:3001/api/visites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData }),
@@ -78,12 +78,12 @@ export default function Visites() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette visite ?')) return;
-    await fetch(`http://localhost:3000/api/visites/${id}`, { method: 'DELETE' });
+    await fetch(`http://localhost:3001/api/visites/${id}`, { method: 'DELETE' });
     fetchVisites();
   };
 
   const handleUpdateRetour = async (id, retour) => {
-    await fetch(`http://localhost:3000/api/visites/${id}`, {
+    await fetch(`http://localhost:3001/api/visites/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ retour }),

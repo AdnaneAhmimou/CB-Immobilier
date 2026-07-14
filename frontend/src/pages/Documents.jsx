@@ -35,14 +35,14 @@ export default function Documents() {
   }, []);
 
   const fetchDocs = () => {
-    fetch('http://localhost:3000/api/documents')
+    fetch('http://localhost:3001/api/documents')
       .then(r => r.json())
       .then(setDocs);
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce document ?')) return;
-    await fetch(`http://localhost:3000/api/documents/${id}`, { method: 'DELETE' });
+    await fetch(`http://localhost:3001/api/documents/${id}`, { method: 'DELETE' });
     fetchDocs();
   };
 
@@ -54,7 +54,7 @@ export default function Documents() {
     form.append('nom', uploadName || uploadFile.name);
     if (uploadBienId)   form.append('bienId',   uploadBienId);
     if (uploadClientId) form.append('clientId', uploadClientId);
-    await fetch('http://localhost:3000/api/documents/upload', { method: 'POST', body: form });
+    await fetch('http://localhost:3001/api/documents/upload', { method: 'POST', body: form });
     setIsModalOpen(false);
     setUploadFile(null);
     setUploadName('');
@@ -164,7 +164,7 @@ export default function Documents() {
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <a
-                            href={`http://localhost:3000${doc.filePath}`}
+                            href={`http://localhost:3001${doc.filePath}`}
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-ghost btn-icon btn-sm"

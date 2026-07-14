@@ -54,8 +54,8 @@ export default function Matching() {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:3000/api/clients').then(r => r.json()),
-      fetch('http://localhost:3000/api/biens').then(r => r.json()),
+      fetch('http://localhost:3001/api/clients').then(r => r.json()),
+      fetch('http://localhost:3001/api/biens').then(r => r.json()),
     ]).then(([c, b]) => {
       setClients(c.filter(x => x.type === 'Acheteur' || x.type === 'Locataire'));
       setBiens(b);
@@ -85,7 +85,7 @@ export default function Matching() {
 
   const handlePlanifierVisite = async (e) => {
     e.preventDefault();
-    await fetch('http://localhost:3000/api/visites', {
+    await fetch('http://localhost:3001/api/visites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bienId: visiteBien.id, clientId: selected.id, date: visiteDate, retour: 'En attente' }),
@@ -178,7 +178,7 @@ export default function Matching() {
                     <div key={bien.id} className="bien-card">
                       <div className="bien-card-photo">
                         {bien.documents?.[0]
-                          ? <img src={`http://localhost:3000${bien.documents[0].filePath}`} alt="Bien" />
+                          ? <img src={`http://localhost:3001${bien.documents[0].filePath}`} alt="Bien" />
                           : <Building2 size={40} className="bien-card-photo-icon" />}
                         <div className="bien-card-badges">
                           <span className="badge badge-green">Disponible</span>

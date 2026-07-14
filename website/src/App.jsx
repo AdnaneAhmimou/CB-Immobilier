@@ -6,7 +6,7 @@ import {
   ChevronRight, Warehouse, Coffee, Store, Trees,
 } from 'lucide-react';
 
-const API = 'http://localhost:3000';
+const API = 'http://localhost:3001';
 
 /* ── Navbar ────────────────────────────────────────────────── */
 function Navbar() {

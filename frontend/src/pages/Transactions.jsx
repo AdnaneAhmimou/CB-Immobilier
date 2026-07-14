@@ -20,15 +20,15 @@ export default function Transactions() {
   }, []);
 
   const fetchTransactions = async () => {
-    const res = await fetch('http://localhost:3000/api/transactions');
+    const res = await fetch('http://localhost:3001/api/transactions');
     if (res.ok) setTransactions(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3000/api/biens');
+    const res = await fetch('http://localhost:3001/api/biens');
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients');
+    const res = await fetch('http://localhost:3001/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -64,13 +64,13 @@ export default function Transactions() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editId) {
-      await fetch(`http://localhost:3000/api/transactions/${editId}`, {
+      await fetch(`http://localhost:3001/api/transactions/${editId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: formData.type, prixFinal: formData.prixFinal, dateSignature: formData.dateSignature, notes: formData.notes }),
       });
     } else {
-      await fetch('http://localhost:3000/api/transactions', {
+      await fetch('http://localhost:3001/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -82,7 +82,7 @@ export default function Transactions() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette transaction ?')) return;
-    await fetch(`http://localhost:3000/api/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`http://localhost:3001/api/transactions/${id}`, { method: 'DELETE' });
     fetchTransactions();
   };
 

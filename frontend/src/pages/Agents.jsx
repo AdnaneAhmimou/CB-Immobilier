@@ -18,7 +18,7 @@ export default function Agents() {
   useEffect(() => { fetchAgents(); }, []);
 
   const fetchAgents = () => {
-    fetch('http://localhost:3000/api/agents')
+    fetch('http://localhost:3001/api/agents')
       .then(r => r.json())
       .then(setAgents);
   };
@@ -30,7 +30,7 @@ export default function Agents() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:3000/api/agents/${editAgent.id}`, {
+    await fetch(`http://localhost:3001/api/agents/${editAgent.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),

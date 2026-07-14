@@ -51,7 +51,7 @@ export default function Clients({ filter = 'All' }) {
   useEffect(() => { setSearch(''); }, [filter]);
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3000/api/clients');
+    const res = await fetch('http://localhost:3001/api/clients');
     if (res.ok) setClients(await res.json());
   };
 
@@ -74,13 +74,13 @@ export default function Clients({ filter = 'All' }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce client ?')) return;
-    await fetch(`http://localhost:3000/api/clients/${id}`, { method: 'DELETE' });
+    await fetch(`http://localhost:3001/api/clients/${id}`, { method: 'DELETE' });
     fetchClients();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const url    = editId ? `http://localhost:3000/api/clients/${editId}` : 'http://localhost:3000/api/clients';
+    const url    = editId ? `http://localhost:3001/api/clients/${editId}` : 'http://localhost:3001/api/clients';
     const method = editId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,
@@ -102,7 +102,8 @@ export default function Clients({ filter = 'All' }) {
     .filter(c => {
       const q = search.toLowerCase();
       return !q || `${c.nom} ${c.prenom} ${c.cin || ''} ${c.telephone}`.toLowerCase().includes(q);
-    });
+    })
+    .sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr', { sensitivity: 'base' }));
 
   return (
     <div className="page-content">
