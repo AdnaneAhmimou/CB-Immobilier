@@ -121,6 +121,7 @@ model Document {
   id        String   @id @default(uuid())
   nom       String
   filePath  String
+  order     Int      @default(0)
   createdAt DateTime @default(now())
 
   bienId   String?

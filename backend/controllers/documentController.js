@@ -6,16 +6,34 @@ const catchAsync = require('../utils/catchAsync');
 exports.uploadDocument = catchAsync(async (req, res, next) => {
     if (!req.file) return res.status(400).json({ message: 'Aucun fichier.' });
     const { nom, bienId, clientId } = req.body;
-    
+
+    const last = await prisma.document.findFirst({
+        where: { bienId: bienId || null, clientId: clientId || null },
+        orderBy: { order: 'desc' },
+        select: { order: true },
+    });
+
     const doc = await prisma.document.create({
         data: {
             nom: nom || req.file.originalname,
             filePath: '/uploads/' + req.file.filename,
+            order: (last?.order ?? -1) + 1,
             bienId: bienId || null,
             clientId: clientId || null
         }
     });
     res.status(201).json(doc);
+});
+
+exports.reorderDocuments = catchAsync(async (req, res, next) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'ids doit être un tableau non vide.' });
+    }
+    await prisma.$transaction(
+        ids.map((id, index) => prisma.document.update({ where: { id }, data: { order: index } }))
+    );
+    res.status(204).send();
 });
 
 exports.getAllDocuments = catchAsync(async (req, res, next) => {

@@ -4,12 +4,14 @@ import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
 const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
 
-const byName = (a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+const byName  = (a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+// Manual drag order wins; documents that were never reordered (order 0 default) fall back to name.
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || byName(a, b);
 
-const getPhotos = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(d.filePath)).sort(byName);
-const getVideos = (bien) => (bien?.documents || []).filter(d => VIDEO_EXTS.test(d.filePath)).sort(byName);
+const getPhotos = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(d.filePath)).sort(byOrder);
+const getVideos = (bien) => (bien?.documents || []).filter(d => VIDEO_EXTS.test(d.filePath)).sort(byOrder);
 const getDocs   = (bien) => (bien?.documents || []).filter(d => !IMAGE_EXTS.test(d.filePath) && !VIDEO_EXTS.test(d.filePath)).sort(byName);
-const getMedia  = (bien) => [...getPhotos(bien), ...getVideos(bien)].sort(byName);
+const getMedia  = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(d.filePath) || VIDEO_EXTS.test(d.filePath)).sort(byOrder);
 const isVideoDoc = (d) => VIDEO_EXTS.test(d.filePath);
 
 const STATUT_BADGE = {
@@ -53,6 +55,12 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [detailBien, setDetailBien]             = useState(null);
   const [photoIndex, setPhotoIndex]             = useState(0);
   const [isFullscreen, setIsFullscreen]         = useState(false);
+  // Bumped every time a media modal opens so image/video URLs are never repeated —
+  // defeats any caching layer (browser/AV/proxy) that ignores Cache-Control, since
+  // there's no prior request for the new URL to have a stale entry for.
+  const [cacheBust, setCacheBust]               = useState(() => Date.now());
+  const mediaUrl = (doc) => `http://localhost:3001${doc.filePath}?v=${cacheBust}`;
+  const [dragMediaIndex, setDragMediaIndex]     = useState(null);
 
   // Fullscreen viewer keyboard controls
   useEffect(() => {
@@ -96,6 +104,27 @@ export default function Biens({ defaultTab = 'vente' }) {
     if (!updated) return;
     setSelectedBien(prev => (prev?.id === bienId ? updated : prev));
     setDetailBien(prev => (prev?.id === bienId ? updated : prev));
+  };
+
+  // Drag-to-reorder in the thumbnail strip — the first photo becomes the bien card cover.
+  const reorderMedia = async (bien, orderedMedia) => {
+    const orderMap = new Map(orderedMedia.map((m, i) => [m.id, i]));
+    const updatedBien = {
+      ...bien,
+      documents: bien.documents.map(d => orderMap.has(d.id) ? { ...d, order: orderMap.get(d.id) } : d),
+    };
+    // Optimistic local update so the drag feels instant
+    setBiens(prev => prev.map(b => b.id === bien.id ? updatedBien : b));
+    setSelectedBien(prev => (prev?.id === bien.id ? updatedBien : prev));
+    setDetailBien(prev => (prev?.id === bien.id ? updatedBien : prev));
+
+    await fetch('http://localhost:3001/api/documents/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: orderedMedia.map(m => m.id) }),
+    });
+    const data = await fetchBiens();
+    refreshBienRefs(data, bien.id);
   };
 
   const fetchClients = async () => {
@@ -199,7 +228,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   };
 
   // ── Upload ──────────────────────────────────────────────────
-  const openUpload = (bien) => { setSelectedBien(bien); setUploadFiles([]); setUploadSuccessMsg(''); setIsUploadModalOpen(true); };
+  const openUpload = (bien) => { setSelectedBien(bien); setUploadFiles([]); setUploadSuccessMsg(''); setCacheBust(Date.now()); setIsUploadModalOpen(true); };
 
   const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files).map(f => ({ file: f, name: f.name }));
@@ -253,6 +282,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     setUploading(false);
     setUploadProgress(0);
     setUploadFiles([]);
+    setCacheBust(Date.now());
     const data = await fetchBiens();
     refreshBienRefs(data, selectedBien.id);
   };
@@ -260,6 +290,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   const handleDeleteDocument = async (docId, bienId) => {
     if (!confirm('Supprimer ce fichier ?')) return;
     await fetch(`http://localhost:3001/api/documents/${docId}`, { method: 'DELETE' });
+    setCacheBust(Date.now());
     const data = await fetchBiens();
     refreshBienRefs(data, bienId);
   };
@@ -270,7 +301,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     fetchBiens();
   };
 
-  const openDetail = (bien) => { setDetailBien(bien); setPhotoIndex(0); setIsFullscreen(false); };
+  const openDetail = (bien) => { setDetailBien(bien); setPhotoIndex(0); setIsFullscreen(false); setCacheBust(Date.now()); };
   const closeDetail = () => { setDetailBien(null); setIsFullscreen(false); };
 
   const set = (field) => (e) => setFormData({ ...formData, [field]: e.target.value });
@@ -349,7 +380,7 @@ export default function Biens({ defaultTab = 'vente' }) {
               <div key={bien.id} className="bien-card">
                 <div className="bien-card-photo">
                   {cover
-                    ? <img src={`http://localhost:3001${cover.filePath}`} alt="Bien" />
+                    ? <img src={mediaUrl(cover)} alt="Bien" />
                     : <Building2 size={48} className="bien-card-photo-icon" />}
                   <div className="bien-card-badges">
                     <Badge statut={bien.statut} />
@@ -559,13 +590,13 @@ export default function Biens({ defaultTab = 'vente' }) {
                     {isVideoDoc(current) ? (
                       <video
                         key={current.id}
-                        src={`http://localhost:3001${current.filePath}`}
+                        src={mediaUrl(current)}
                         controls
                         style={{ maxHeight: '100%', maxWidth: '100%' }}
                       />
                     ) : (
                       <img
-                        src={`http://localhost:3001${current.filePath}`}
+                        src={mediaUrl(current)}
                         alt={current.nom}
                         onClick={() => setIsFullscreen(true)}
                         style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
@@ -598,26 +629,48 @@ export default function Biens({ defaultTab = 'vente' }) {
                         </div>
                       </>
                     )}
-                    {/* Thumbnail strip */}
+                    {/* Thumbnail strip — drag to reorder; the first photo becomes the card cover */}
                     {media.length > 1 && (
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', gap: 4, padding: '0 12px 8px', overflowX: 'auto' }}>
-                        {media.map((m, i) => (
-                          isVideoDoc(m) ? (
+                        {media.map((m, i) => {
+                          const dragProps = {
+                            draggable: true,
+                            onDragStart: () => setDragMediaIndex(i),
+                            onDragOver: e => e.preventDefault(),
+                            onDrop: () => {
+                              if (dragMediaIndex === null || dragMediaIndex === i) { setDragMediaIndex(null); return; }
+                              const reordered = [...media];
+                              const [moved] = reordered.splice(dragMediaIndex, 1);
+                              reordered.splice(i, 0, moved);
+                              setDragMediaIndex(null);
+                              setPhotoIndex(i);
+                              reorderMedia(detailBien, reordered);
+                            },
+                            onDragEnd: () => setDragMediaIndex(null),
+                          };
+                          const thumbStyle = {
+                            width: 48, height: 36, borderRadius: 4, cursor: 'grab', flexShrink: 0,
+                            border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent',
+                            opacity: dragMediaIndex === i ? 0.4 : 1,
+                          };
+                          return isVideoDoc(m) ? (
                             <div
                               key={m.id}
+                              {...dragProps}
                               onClick={() => setPhotoIndex(i)}
-                              style={{ width: 48, height: 36, borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0, background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              style={{ ...thumbStyle, background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             ><Film size={16} color="#fff" /></div>
                           ) : (
                             <img
                               key={m.id}
-                              src={`http://localhost:3001${m.filePath}`}
+                              {...dragProps}
+                              src={mediaUrl(m)}
                               alt=""
                               onClick={() => setPhotoIndex(i)}
-                              style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0 }}
+                              style={{ ...thumbStyle, objectFit: 'cover' }}
                             />
-                          )
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -655,7 +708,7 @@ export default function Biens({ defaultTab = 'vente' }) {
                       {docs.map(d => (
                         <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)', fontSize: 13 }}>
                           <a
-                            href={`http://localhost:3001${d.filePath}`}
+                            href={mediaUrl(d)}
                             target="_blank"
                             rel="noreferrer"
                             download
@@ -701,7 +754,7 @@ export default function Biens({ defaultTab = 'vente' }) {
               {isVideoDoc(current) ? (
                 <video
                   key={current.id}
-                  src={`http://localhost:3001${current.filePath}`}
+                  src={mediaUrl(current)}
                   controls
                   autoPlay
                   onClick={e => e.stopPropagation()}
@@ -709,7 +762,7 @@ export default function Biens({ defaultTab = 'vente' }) {
                 />
               ) : (
                 <img
-                  src={`http://localhost:3001${current.filePath}`}
+                  src={mediaUrl(current)}
                   alt={current.nom}
                   onClick={e => e.stopPropagation()}
                   style={{ maxHeight: '92vh', maxWidth: '92vw', objectFit: 'contain' }}
@@ -773,7 +826,7 @@ export default function Biens({ defaultTab = 'vente' }) {
                                 <Film size={22} color="#fff" />
                               </div>
                             ) : (
-                              <img src={`http://localhost:3001${m.filePath}`} alt={m.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }} />
+                              <img src={mediaUrl(m)} alt={m.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }} />
                             )}
                             <button type="button" onClick={() => handleDeleteDocument(m.id, selectedBien.id)} title="Supprimer"
                               style={{ position: 'absolute', top: -6, right: -6, background: 'var(--color-danger)', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>

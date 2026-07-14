@@ -1,15 +1,24 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Users, ShoppingBag, Home,
+  LayoutDashboard, Building2, Users, ShoppingBag, Home, MapPin,
   UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
 } from 'lucide-react';
 import logo from '../assets/cb_immobilier_logo.jpeg';
+
+// Satellite view (data=!3m2!1e3), zoomed to city level
+const EL_JADIDA_MAPS_URL = 'https://www.google.com/maps/place/El+Jadida/@33.2334454,-8.5448642,11879m/data=!3m2!1e3!4b1!4m6!3m5!1s0xda91dc1b421fe47:0x307cf87fb6b01a1f!8m2!3d33.2347178!4d-8.5027492!16zL20vMDNodjly?entry=ttu&g_ep=EgoyMDI2MDcxMi4wIKXMDSoASAFQAw%3D%3D';
 
 const sections = [
   {
     label: null,
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Tableau de Bord', exact: true },
+    ],
+  },
+  {
+    label: null,
+    items: [
+      { to: EL_JADIDA_MAPS_URL, icon: MapPin, label: 'Carte', external: true },
     ],
   },
   {
@@ -66,16 +75,23 @@ function Sidebar() {
             {section.label && (
               <span className="sidebar-section-label">{section.label}</span>
             )}
-            {section.items.map(({ to, icon: Icon, label, exact }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={!!exact}
-                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-              >
-                <Icon className="sidebar-link-icon" size={17} />
-                {label}
-              </NavLink>
+            {section.items.map(({ to, icon: Icon, label, exact, external }) => (
+              external ? (
+                <a key={to} href={to} target="_blank" rel="noreferrer" className="sidebar-link">
+                  <Icon className="sidebar-link-icon" size={17} />
+                  {label}
+                </a>
+              ) : (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={!!exact}
+                  className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                >
+                  <Icon className="sidebar-link-icon" size={17} />
+                  {label}
+                </NavLink>
+              )
             ))}
           </div>
         ))}
