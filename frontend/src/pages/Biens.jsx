@@ -9,6 +9,8 @@ const byName = (a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' 
 const getPhotos = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(d.filePath)).sort(byName);
 const getVideos = (bien) => (bien?.documents || []).filter(d => VIDEO_EXTS.test(d.filePath)).sort(byName);
 const getDocs   = (bien) => (bien?.documents || []).filter(d => !IMAGE_EXTS.test(d.filePath) && !VIDEO_EXTS.test(d.filePath)).sort(byName);
+const getMedia  = (bien) => [...getPhotos(bien), ...getVideos(bien)].sort(byName);
+const isVideoDoc = (d) => VIDEO_EXTS.test(d.filePath);
 
 const STATUT_BADGE = {
   'Disponible': 'badge-green',
@@ -56,7 +58,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   useEffect(() => {
     if (!isFullscreen) return;
     const onKey = (e) => {
-      const count = getPhotos(detailBien).length;
+      const count = getMedia(detailBien).length;
       if (e.key === 'Escape') setIsFullscreen(false);
       if (e.key === 'ArrowLeft') setPhotoIndex(i => (i - 1 + count) % count);
       if (e.key === 'ArrowRight') setPhotoIndex(i => (i + 1) % count);
@@ -535,11 +537,10 @@ export default function Biens({ defaultTab = 'vente' }) {
 
       {/* ── Detail Modal ── */}
       {detailBien && (() => {
-        const photos = getPhotos(detailBien);
-        const videos = getVideos(detailBien);
-        const docs   = getDocs(detailBien);
-        const safeIndex = Math.min(photoIndex, Math.max(photos.length - 1, 0));
-        const photo  = photos[safeIndex];
+        const media = getMedia(detailBien);
+        const docs  = getDocs(detailBien);
+        const safeIndex = Math.min(photoIndex, Math.max(media.length - 1, 0));
+        const current = media[safeIndex];
         const dOwner = detailBien.transactionType === 'Vente' ? detailBien.vendeur : detailBien.bailleur;
         const dBuyer = detailBien.transactionType === 'Vente' ? detailBien.acheteur : detailBien.locataire;
         return (
@@ -552,51 +553,70 @@ export default function Biens({ defaultTab = 'vente' }) {
               </div>
 
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                {/* Photo gallery */}
-                {photos.length > 0 ? (
+                {/* Media gallery — photos and videos in one carousel */}
+                {media.length > 0 ? (
                   <div style={{ position: 'relative', background: '#000', height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img
-                      src={`http://localhost:3001${photo.filePath}`}
-                      alt={photo.nom}
-                      onClick={() => setIsFullscreen(true)}
-                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
-                    />
+                    {isVideoDoc(current) ? (
+                      <video
+                        key={current.id}
+                        src={`http://localhost:3001${current.filePath}`}
+                        controls
+                        style={{ maxHeight: '100%', maxWidth: '100%' }}
+                      />
+                    ) : (
+                      <img
+                        src={`http://localhost:3001${current.filePath}`}
+                        alt={current.nom}
+                        onClick={() => setIsFullscreen(true)}
+                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
+                      />
+                    )}
+                    {!isVideoDoc(current) && (
+                      <button
+                        onClick={() => setIsFullscreen(true)}
+                        title="Voir en plein écran"
+                        style={{ position: 'absolute', right: 52, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                      ><Maximize2 size={15} /></button>
+                    )}
                     <button
-                      onClick={() => setIsFullscreen(true)}
-                      title="Voir en plein écran"
-                      style={{ position: 'absolute', right: 52, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-                    ><Maximize2 size={15} /></button>
-                    <button
-                      onClick={() => handleDeleteDocument(photo.id, detailBien.id)}
-                      title="Supprimer cette photo"
+                      onClick={() => handleDeleteDocument(current.id, detailBien.id)}
+                      title="Supprimer"
                       style={{ position: 'absolute', right: 12, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                     ><Trash2 size={15} /></button>
-                    {photos.length > 1 && (
+                    {media.length > 1 && (
                       <>
                         <button
-                          onClick={() => setPhotoIndex(i => (i - 1 + photos.length) % photos.length)}
+                          onClick={() => setPhotoIndex(i => (i - 1 + media.length) % media.length)}
                           style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                         ><ChevronLeft size={20} /></button>
                         <button
-                          onClick={() => setPhotoIndex(i => (i + 1) % photos.length)}
+                          onClick={() => setPhotoIndex(i => (i + 1) % media.length)}
                           style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                         ><ChevronRight size={20} /></button>
                         <div style={{ position: 'absolute', bottom: 10, right: 14, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 12, borderRadius: 12, padding: '2px 10px' }}>
-                          {safeIndex + 1} / {photos.length}
+                          {safeIndex + 1} / {media.length}
                         </div>
                       </>
                     )}
                     {/* Thumbnail strip */}
-                    {photos.length > 1 && (
+                    {media.length > 1 && (
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', gap: 4, padding: '0 12px 8px', overflowX: 'auto' }}>
-                        {photos.map((p, i) => (
-                          <img
-                            key={p.id}
-                            src={`http://localhost:3001${p.filePath}`}
-                            alt=""
-                            onClick={() => setPhotoIndex(i)}
-                            style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0 }}
-                          />
+                        {media.map((m, i) => (
+                          isVideoDoc(m) ? (
+                            <div
+                              key={m.id}
+                              onClick={() => setPhotoIndex(i)}
+                              style={{ width: 48, height: 36, borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0, background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            ><Film size={16} color="#fff" /></div>
+                          ) : (
+                            <img
+                              key={m.id}
+                              src={`http://localhost:3001${m.filePath}`}
+                              alt=""
+                              onClick={() => setPhotoIndex(i)}
+                              style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, cursor: 'pointer', border: i === safeIndex ? '2px solid var(--color-accent)' : '2px solid transparent', flexShrink: 0 }}
+                            />
+                          )
                         ))}
                       </div>
                     )}
@@ -626,26 +646,6 @@ export default function Biens({ defaultTab = 'vente' }) {
                     </div>
                   ))}
                 </div>
-
-                {/* Videos */}
-                {videos.length > 0 && (
-                  <div style={{ padding: '0 24px 20px' }}>
-                    <div style={{ fontSize: 12, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Vidéos</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {videos.map(v => (
-                        <div key={v.id} style={{ border: '1px solid var(--color-hairline)', borderRadius: 'var(--rounded-sm)', overflow: 'hidden' }}>
-                          <video src={`http://localhost:3001${v.filePath}`} controls style={{ width: '100%', maxHeight: 260, display: 'block', background: '#000' }} />
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px' }}>
-                            <span style={{ flex: 1, fontSize: 13 }}>{v.nom}</span>
-                            <button type="button" onClick={() => handleDeleteDocument(v.id, detailBien.id)} title="Supprimer cette vidéo" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Documents */}
                 {docs.length > 0 && (
@@ -686,8 +686,8 @@ export default function Biens({ defaultTab = 'vente' }) {
             </div>
           </div>
 
-          {/* ── Fullscreen photo viewer ── */}
-          {isFullscreen && photo && (
+          {/* ── Fullscreen media viewer — stays open across photos and videos ── */}
+          {isFullscreen && current && (
             <div
               onClick={() => setIsFullscreen(false)}
               style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -698,25 +698,36 @@ export default function Biens({ defaultTab = 'vente' }) {
                 style={{ position: 'absolute', right: 20, top: 20, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
               ><X size={22} /></button>
 
-              <img
-                src={`http://localhost:3001${photo.filePath}`}
-                alt={photo.nom}
-                onClick={e => e.stopPropagation()}
-                style={{ maxHeight: '92vh', maxWidth: '92vw', objectFit: 'contain' }}
-              />
+              {isVideoDoc(current) ? (
+                <video
+                  key={current.id}
+                  src={`http://localhost:3001${current.filePath}`}
+                  controls
+                  autoPlay
+                  onClick={e => e.stopPropagation()}
+                  style={{ maxHeight: '92vh', maxWidth: '92vw' }}
+                />
+              ) : (
+                <img
+                  src={`http://localhost:3001${current.filePath}`}
+                  alt={current.nom}
+                  onClick={e => e.stopPropagation()}
+                  style={{ maxHeight: '92vh', maxWidth: '92vw', objectFit: 'contain' }}
+                />
+              )}
 
-              {photos.length > 1 && (
+              {media.length > 1 && (
                 <>
                   <button
-                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i - 1 + photos.length) % photos.length); }}
+                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i - 1 + media.length) % media.length); }}
                     style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                   ><ChevronLeft size={24} /></button>
                   <button
-                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i + 1) % photos.length); }}
+                    onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i + 1) % media.length); }}
                     style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                   ><ChevronRight size={24} /></button>
                   <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, borderRadius: 12, padding: '4px 14px' }}>
-                    {safeIndex + 1} / {photos.length}
+                    {safeIndex + 1} / {media.length}
                   </div>
                 </>
               )}
@@ -728,9 +739,8 @@ export default function Biens({ defaultTab = 'vente' }) {
 
       {/* ── Upload / Media Manager Modal ── */}
       {isUploadModalOpen && selectedBien && (() => {
-        const existingPhotos = getPhotos(selectedBien);
-        const existingVideos = getVideos(selectedBien);
-        const existingDocs   = getDocs(selectedBien);
+        const existingMedia = getMedia(selectedBien);
+        const existingDocs  = getDocs(selectedBien);
         return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsUploadModalOpen(false)}>
           <div className="modal">
@@ -751,15 +761,21 @@ export default function Biens({ defaultTab = 'vente' }) {
                 )}
 
                 {/* Existing media */}
-                {(existingPhotos.length > 0 || existingVideos.length > 0 || existingDocs.length > 0) && (
+                {(existingMedia.length > 0 || existingDocs.length > 0) && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ fontSize: 12, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fichiers actuels</div>
-                    {existingPhotos.length > 0 && (
+                    {existingMedia.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {existingPhotos.map(p => (
-                          <div key={p.id} style={{ position: 'relative', width: 72, height: 72 }}>
-                            <img src={`http://localhost:3001${p.filePath}`} alt={p.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }} />
-                            <button type="button" onClick={() => handleDeleteDocument(p.id, selectedBien.id)} title="Supprimer"
+                        {existingMedia.map(m => (
+                          <div key={m.id} style={{ position: 'relative', width: 72, height: 72 }}>
+                            {isVideoDoc(m) ? (
+                              <div style={{ width: '100%', height: '100%', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Film size={22} color="#fff" />
+                              </div>
+                            ) : (
+                              <img src={`http://localhost:3001${m.filePath}`} alt={m.nom} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }} />
+                            )}
+                            <button type="button" onClick={() => handleDeleteDocument(m.id, selectedBien.id)} title="Supprimer"
                               style={{ position: 'absolute', top: -6, right: -6, background: 'var(--color-danger)', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                               <X size={12} />
                             </button>
@@ -767,15 +783,6 @@ export default function Biens({ defaultTab = 'vente' }) {
                         ))}
                       </div>
                     )}
-                    {existingVideos.map(v => (
-                      <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }}>
-                        <Film size={14} style={{ color: 'var(--color-muted)', flexShrink: 0 }} />
-                        <span style={{ flex: 1, fontSize: 13 }}>{v.nom}</span>
-                        <button type="button" onClick={() => handleDeleteDocument(v.id, selectedBien.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-danger)', display: 'flex', padding: 2 }}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
                     {existingDocs.map(d => (
                       <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-soft)', borderRadius: 'var(--rounded-sm)', border: '1px solid var(--color-hairline)' }}>
                         <FileUp size={14} style={{ color: 'var(--color-muted)', flexShrink: 0 }} />
