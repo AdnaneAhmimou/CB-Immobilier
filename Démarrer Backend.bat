@@ -23,6 +23,6 @@ if not exist "node_modules" (
 
 start cmd /k "npm start"
 
-echo [OK] Le serveur backend est en cours d'execution sur le port 3000.
+echo [OK] Le serveur backend est en cours d'execution sur le port 3001.
 echo [INFO] Ne fermez pas la fenetre noire qui vient de s'ouvrir.
 pause
