@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2, Loader2 } from 'lucide-react';
+import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2, Loader2, MoveLeft, MoveRight } from 'lucide-react';
 
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
 const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
@@ -47,6 +47,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [editBienId, setEditBienId]             = useState(null);
   const [formData, setFormData]                 = useState(EMPTY_VENTE);
   const [dealBuyerId, setDealBuyerId]           = useState('');
+  const [dealCommission, setDealCommission]     = useState(2.5);
   const [uploadFiles, setUploadFiles]           = useState([]);  // [{file, name}]
   const [uploading, setUploading]               = useState(false);
   const [uploadProgress, setUploadProgress]     = useState(0);
@@ -141,10 +142,16 @@ export default function Biens({ defaultTab = 'vente' }) {
   const isVente    = tab === 'vente';
   const filtered   = biens
     .filter(b => b.transactionType === (isVente ? 'Vente' : 'Location'))
-    .filter(b =>
-      b.localisation.toLowerCase().includes(search.toLowerCase()) ||
-      b.type.toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(b => {
+      const q = search.toLowerCase();
+      const names = [b.vendeur, b.bailleur, b.acheteur, b.locataire]
+        .filter(Boolean)
+        .map(c => `${c.nom} ${c.prenom}`)
+        .join(' ');
+      return b.localisation.toLowerCase().includes(q) ||
+        b.type.toLowerCase().includes(q) ||
+        names.toLowerCase().includes(q);
+    });
 
   // ── Open add/edit modal ─────────────────────────────────────
   const openAdd = () => {
@@ -201,14 +208,14 @@ export default function Biens({ defaultTab = 'vente' }) {
     setSelectedBien(bien);
     const buyers = isVente ? acheteurs : locataires;
     setDealBuyerId(buyers[0]?.id || '');
+    const owner = bien.transactionType === 'Vente' ? bien.vendeur : bien.bailleur;
+    setDealCommission(owner?.commission ?? 2.5);
     setIsDealModalOpen(true);
   };
 
   const handleCloseDeal = async (e) => {
     e.preventDefault();
-    const txType     = selectedBien.transactionType;
-    const owner      = txType === 'Vente' ? selectedBien.vendeur : selectedBien.bailleur;
-    const commission = owner?.commission ?? 3;
+    const txType = selectedBien.transactionType;
 
     // Create transaction (controller also updates bien status)
     await fetch('http://localhost:3001/api/transactions', {
@@ -219,7 +226,7 @@ export default function Biens({ defaultTab = 'vente' }) {
         clientId:      dealBuyerId,
         type:          txType,
         prixFinal:     selectedBien.prix,
-        commission,
+        commission:    dealCommission,
         dateSignature: new Date().toISOString(),
       }),
     });
@@ -357,7 +364,7 @@ export default function Biens({ defaultTab = 'vente' }) {
       <div className="toolbar">
         <div className="search-bar" style={{ maxWidth: 400 }}>
           <Search className="search-bar-icon" size={16} />
-          <input className="input-field" placeholder="Rechercher par adresse ou type..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input-field" placeholder="Rechercher par adresse, type ou nom..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
@@ -545,12 +552,31 @@ export default function Biens({ defaultTab = 'vente' }) {
                     Aucun {buyerLabel.toLowerCase()} enregistré. Ajoutez-en un d'abord.
                   </div>
                 ) : (
-                  <div className="input-group">
-                    <label className="input-label">{buyerLabel}</label>
-                    <select className="input-field" required value={dealBuyerId} onChange={e => setDealBuyerId(e.target.value)}>
-                      {buyers.map(b => <option key={b.id} value={b.id}>{b.nom} {b.prenom}</option>)}
-                    </select>
-                  </div>
+                  <>
+                    <div className="input-group">
+                      <label className="input-label">{buyerLabel}</label>
+                      <select className="input-field" required value={dealBuyerId} onChange={e => setDealBuyerId(e.target.value)}>
+                        {buyers.map(b => <option key={b.id} value={b.id}>{b.nom} {b.prenom}</option>)}
+                      </select>
+                    </div>
+                    <div className="input-group" style={{ marginTop: 12 }}>
+                      <label className="input-label">Commission agence (%)</label>
+                      <input
+                        type="number" step="0.1" min="0" max="2.5" required
+                        className="input-field"
+                        value={dealCommission}
+                        onChange={e => setDealCommission(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                        placeholder="2.5"
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--color-muted)' }}>Taux standard de l'agence : 2,5 % ou moins.</span>
+                    </div>
+                    <div className="alert alert-success" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Commission de l'agence</span>
+                      <strong>
+                        {((selectedBien.prix * (parseFloat(dealCommission) || 0)) / 100).toLocaleString('fr-FR')} MAD
+                      </strong>
+                    </div>
+                  </>
                 )}
               </div>
               <div className="modal-footer">
@@ -572,6 +598,16 @@ export default function Biens({ defaultTab = 'vente' }) {
         const docs  = getDocs(detailBien);
         const safeIndex = Math.min(photoIndex, Math.max(media.length - 1, 0));
         const current = media[safeIndex];
+        // Button-based reorder — works on touch devices, unlike HTML5 drag-and-drop
+        const moveMedia = (direction) => {
+          const target = safeIndex + direction;
+          if (target < 0 || target >= media.length) return;
+          const reordered = [...media];
+          const [moved] = reordered.splice(safeIndex, 1);
+          reordered.splice(target, 0, moved);
+          setPhotoIndex(target);
+          reorderMedia(detailBien, reordered);
+        };
         const dOwner = detailBien.transactionType === 'Vente' ? detailBien.vendeur : detailBien.bailleur;
         const dBuyer = detailBien.transactionType === 'Vente' ? detailBien.acheteur : detailBien.locataire;
         return (
@@ -614,6 +650,22 @@ export default function Biens({ defaultTab = 'vente' }) {
                       title="Supprimer"
                       style={{ position: 'absolute', right: 12, top: 12, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
                     ><Trash2 size={15} /></button>
+                    {media.length > 1 && (
+                      <div style={{ position: 'absolute', left: 12, top: 12, display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => moveMedia(-1)}
+                          disabled={safeIndex === 0}
+                          title="Déplacer vers la gauche"
+                          style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: safeIndex === 0 ? 'default' : 'pointer', color: '#fff', opacity: safeIndex === 0 ? 0.4 : 1 }}
+                        ><MoveLeft size={15} /></button>
+                        <button
+                          onClick={() => moveMedia(1)}
+                          disabled={safeIndex === media.length - 1}
+                          title="Déplacer vers la droite"
+                          style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: safeIndex === media.length - 1 ? 'default' : 'pointer', color: '#fff', opacity: safeIndex === media.length - 1 ? 0.4 : 1 }}
+                        ><MoveRight size={15} /></button>
+                      </div>
+                    )}
                     {media.length > 1 && (
                       <>
                         <button

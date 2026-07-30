@@ -11,7 +11,8 @@ exports.getAllTransactions = catchAsync(async (req, res) => {
           bailleur: { select: { nom: true, prenom: true, commission: true } },
         },
       },
-      client: { select: { id: true, nom: true, prenom: true, type: true } },
+      client: { select: { id: true, nom: true, prenom: true, type: true, telephone: true, email: true } },
+      facture: { select: { id: true, numero: true } },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -19,9 +20,9 @@ exports.getAllTransactions = catchAsync(async (req, res) => {
 });
 
 exports.createTransaction = catchAsync(async (req, res) => {
-  const { bienId, clientId, type, prixFinal, dateSignature, notes } = req.body;
+  const { bienId, clientId, type, prixFinal, dateSignature, notes, commission: commissionInput } = req.body;
 
-  // Fetch bien + its owner to calculate commission
+  // Fetch bien + its owner to fall back on a stored commission rate if none was given
   const bien = await prisma.bien.findUnique({
     where: { id: bienId },
     include: {
@@ -32,7 +33,9 @@ exports.createTransaction = catchAsync(async (req, res) => {
   if (!bien) return res.status(404).json({ message: 'Bien introuvable.' });
 
   const owner = bien.transactionType === 'Vente' ? bien.vendeur : bien.bailleur;
-  const tauxCommission = owner?.commission ?? 3;
+  const tauxCommission = commissionInput !== undefined && commissionInput !== ''
+    ? parseFloat(commissionInput)
+    : (owner?.commission ?? 2.5);
   const commission = (parseFloat(prixFinal) * tauxCommission) / 100;
 
   const transaction = await prisma.transaction.create({

@@ -150,22 +150,22 @@ export default function Clients({ filter = 'All' }) {
                 const isO = c.type === 'Vendeur' || c.type === 'Bailleur';
                 return (
                   <tr key={c.id}>
-                    <td style={{ fontWeight: 600 }}>{c.nom} {c.prenom}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-muted)' }}>{c.cin || '—'}</td>
-                    <td>
+                    <td data-label="Nom" style={{ fontWeight: 600 }}>{c.nom} {c.prenom}</td>
+                    <td data-label="CIN" style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-muted)' }}>{c.cin || '—'}</td>
+                    <td data-label="Contact">
                       <div>{c.telephone}</div>
                       {c.email && <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>{c.email}</div>}
                     </td>
-                    <td><span className={`badge ${TYPE_BADGE[c.type] || 'badge-gray'}`}>{c.type}</span></td>
-                    <td style={{ fontSize: 13 }}>
+                    <td data-label="Type"><span className={`badge ${TYPE_BADGE[c.type] || 'badge-gray'}`}>{c.type}</span></td>
+                    <td data-label="Finances" style={{ fontSize: 13 }}>
                       {isO
                         ? <span style={{ color: 'var(--color-success)' }}>Commission : {c.commission ?? '—'}%</span>
                         : <span>{c.type === 'Locataire' ? 'Loyer max' : 'Budget'} : {c.budget ? `${c.budget.toLocaleString('fr-FR')} MAD` : '—'}</span>
                       }
                     </td>
-                    <td><span className={`badge ${STATUT_BADGE[c.statut] || 'badge-gray'}`}>{c.statut}</span></td>
+                    <td data-label="Statut"><span className={`badge ${STATUT_BADGE[c.statut] || 'badge-gray'}`}>{c.statut}</span></td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', width: '100%' }}>
                         <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)} title="Modifier">
                           <Edit2 size={14} />
                         </button>

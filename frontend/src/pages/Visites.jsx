@@ -131,11 +131,11 @@ export default function Visites() {
             <tbody>
               {filtered.map(v => (
                 <tr key={v.id}>
-                  <td><strong>{new Date(v.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</strong></td>
-                  <td>{v.bien?.type} à {v.bien?.localisation}</td>
-                  <td>{v.client?.nom} {v.client?.prenom}</td>
-                  <td style={{ color: 'var(--color-muted)', fontSize: 13 }}>{v.agent?.nom || '—'}</td>
-                  <td>
+                  <td data-label="Date"><strong>{new Date(v.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</strong></td>
+                  <td data-label="Bien">{v.bien?.type} à {v.bien?.localisation}</td>
+                  <td data-label="Client">{v.client?.nom} {v.client?.prenom}</td>
+                  <td data-label="Agent" style={{ color: 'var(--color-muted)', fontSize: 13 }}>{v.agent?.nom || '—'}</td>
+                  <td data-label="Retour">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Badge retour={v.retour} />
                       <select
@@ -151,7 +151,7 @@ export default function Visites() {
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', width: '100%' }}>
                       <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(v)} title="Modifier">
                         <Edit2 size={14} />
                       </button>

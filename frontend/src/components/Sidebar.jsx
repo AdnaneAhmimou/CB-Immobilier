@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShoppingBag, Home, MapPin,
   UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
+  Menu, X,
 } from 'lucide-react';
 import logo from '../assets/cb_immobilier_logo.jpeg';
 
@@ -58,9 +60,14 @@ const sections = [
 ];
 
 function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
-  return (
-    <aside className="sidebar">
+  // Close the drawer automatically whenever the route changes
+  useEffect(() => { setIsOpen(false); }, [location.pathname]);
+
+  const navContent = (
+    <>
       <div className="sidebar-header">
         <img src={logo} alt="CB Immobilier" className="sidebar-logo-img" />
         <div className="sidebar-brand">
@@ -106,7 +113,28 @@ function Sidebar() {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <div className="mobile-topbar">
+        <button className="mobile-topbar-menu-btn" onClick={() => setIsOpen(true)} title="Menu" aria-label="Ouvrir le menu">
+          <Menu size={20} />
+        </button>
+        <img src={logo} alt="" className="mobile-topbar-logo" />
+        <span className="mobile-topbar-name">CB Immobilier</span>
+      </div>
+
+      <div className={`sidebar-overlay${isOpen ? ' open' : ''}`} onClick={() => setIsOpen(false)} />
+
+      <aside className={`sidebar${isOpen ? ' open' : ''}`}>
+        <button className="mobile-topbar-menu-btn sidebar-close-btn" onClick={() => setIsOpen(false)} title="Fermer" aria-label="Fermer le menu">
+          <X size={18} />
+        </button>
+        {navContent}
+      </aside>
+    </>
   );
 }
 

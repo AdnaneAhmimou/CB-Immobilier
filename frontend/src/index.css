@@ -603,3 +603,148 @@ table.data-table { width: 100%; border-collapse: collapse; }
 
 /* ─── CONTAINER ────────────────────────────────── */
 .container { max-width: 1280px; margin: 0 auto; padding: 0 var(--spacing-lg); }
+
+/* ─── MOBILE TOPBAR (hidden on desktop) ──────────── */
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-base);
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  flex-shrink: 0;
+}
+.mobile-topbar-menu-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--color-surface-soft);
+  border-radius: var(--rounded-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+.mobile-topbar-logo { width: 28px; height: 28px; border-radius: var(--rounded-xs); object-fit: cover; flex-shrink: 0; }
+.sidebar-close-btn { display: none; position: absolute; top: var(--spacing-md); right: var(--spacing-md); z-index: 1; }
+@media (max-width: 900px) {
+  .sidebar-close-btn { display: flex; }
+}
+.mobile-topbar-name { font-size: 15px; font-weight: 700; color: var(--color-primary); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 49;
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────
+   Two tiers: 900px collapses the sidebar into an
+   off-canvas drawer; 640px switches to a single-
+   column, touch-first layout throughout. */
+
+@media (max-width: 900px) {
+  .mobile-topbar { display: flex; }
+
+  .app-container { flex-direction: column; height: 100vh; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow-modal);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+
+  .main-content { min-height: 0; }
+}
+
+@media (max-width: 640px) {
+  .page-content { padding: var(--spacing-base); }
+
+  .page-header { flex-direction: column; align-items: stretch; margin-bottom: var(--spacing-lg); }
+  .page-header-actions { width: 100%; }
+  .page-header-actions .btn,
+  .page-header > .btn { width: 100%; }
+  .page-title { font-size: 20px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+  .bien-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .search-bar { max-width: none; }
+
+  /* Full-bleed, near-fullscreen modals instead of a cramped centered box */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: none;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--rounded-xl) var(--rounded-xl) 0 0;
+  }
+  .modal-header { padding: var(--spacing-base) var(--spacing-lg); }
+  .modal-body { padding: var(--spacing-lg); }
+  .modal-footer { padding: var(--spacing-base) var(--spacing-lg); flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1; }
+
+  /* Stacked "card" tables instead of horizontal-scrolling grids */
+  .data-table thead { display: none; }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+  .data-table tr {
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--rounded-md);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-base);
+    background: var(--color-canvas);
+  }
+  .data-table tr:last-child { margin-bottom: 0; }
+  .data-table td {
+    border-bottom: 1px solid var(--color-hairline-soft);
+    padding: var(--spacing-sm) 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-base);
+    text-align: right;
+  }
+  .data-table td:last-child { border-bottom: none; }
+  .data-table td[data-label]::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .login-page { flex-direction: column; }
+  .login-left { min-height: auto; padding: var(--spacing-xl) var(--spacing-lg); }
+  .login-left-title { font-size: 26px; }
+  .login-left-features { display: none; }
+  .login-right { padding: var(--spacing-lg); }
+  .login-form-card { padding: var(--spacing-xl) var(--spacing-lg); }
+
+  .dashboard-activity-grid { grid-template-columns: 1fr !important; }
+  .matching-split { grid-template-columns: 1fr !important; }
+  .matching-split-list { max-height: none !important; }
+  .finances-split { grid-template-columns: 1fr !important; }
+}
+
+/* Touch devices can't hover, so hover-revealed controls must stay visible */
+@media (hover: none) {
+  .bien-card-actions { opacity: 1; }
+}

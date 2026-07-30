@@ -146,7 +146,7 @@ export default function Documents() {
                 <tbody>
                   {group.docs.map(doc => (
                     <tr key={doc.id}>
-                      <td>
+                      <td data-label="Fichier">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ color: 'var(--color-muted)' }}>{fileIcon(doc.filePath)}</span>
                           <div>
@@ -155,14 +155,14 @@ export default function Documents() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontSize: 13 }}>
+                      <td data-label="Lié à" style={{ fontSize: 13 }}>
                         {doc.bien && <div style={{ color: 'var(--color-ink)' }}>{doc.bien.type} — {doc.bien.localisation}</div>}
                         {doc.client && <div style={{ color: 'var(--color-muted)' }}>{doc.client.nom} {doc.client.prenom}</div>}
                         {!doc.bien && !doc.client && <span style={{ color: 'var(--color-muted)' }}>—</span>}
                       </td>
-                      <td style={{ fontSize: 13, color: 'var(--color-muted)' }}>{formatDate(doc.createdAt)}</td>
+                      <td data-label="Date" style={{ fontSize: 13, color: 'var(--color-muted)' }}>{formatDate(doc.createdAt)}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', width: '100%' }}>
                           <a
                             href={`http://localhost:3001${doc.filePath}`}
                             target="_blank"

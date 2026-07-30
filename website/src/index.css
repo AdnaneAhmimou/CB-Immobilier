@@ -48,15 +48,12 @@ body {
 }
 .navbar-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 1280px; margin: 0 auto; }
 
-.navbar-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo-mark {
-  width: 38px; height: 38px; border-radius: 10px;
-  background: var(--gradient); display: flex; align-items: center; justify-content: center;
+.navbar-logo { display: flex; align-items: center; text-decoration: none; }
+.navbar-logo-img {
+  height: 42px; width: auto; object-fit: contain;
+  background: white; padding: 4px 12px; border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
-.logo-mark span { color: white; font-weight: 800; font-size: 15px; letter-spacing: -0.5px; }
-.logo-name { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
-.navbar.scrolled .logo-name { color: var(--ink); }
-.navbar:not(.scrolled) .logo-name { color: white; }
 
 .navbar-links { display: flex; align-items: center; gap: 28px; list-style: none; }
 .navbar-links a {
@@ -407,10 +404,11 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .footer { background: #0A0F1A; color: rgba(255,255,255,0.55); }
 .footer-main { max-width: 1280px; margin: 0 auto; padding: 72px 6% 48px; display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr; gap: 48px; }
 .footer-brand-text { font-size: 14px; line-height: 1.75; margin-top: 14px; max-width: 220px; }
-.footer-logo { display: flex; align-items: center; gap: 10px; }
-.footer-logo-mark { width: 38px; height: 38px; border-radius: 10px; background: var(--gradient); display: flex; align-items: center; justify-content: center; }
-.footer-logo-mark span { color: white; font-weight: 800; font-size: 15px; }
-.footer-logo-name { font-size: 17px; font-weight: 700; color: white; }
+.footer-logo { display: flex; align-items: center; margin-bottom: 12px; }
+.footer-logo-img {
+  height: 44px; width: auto; object-fit: contain;
+  background: white; padding: 5px 14px; border-radius: 10px;
+}
 .footer-col h4 { font-size: 13px; font-weight: 700; color: white; margin-bottom: 18px; letter-spacing: 0.03em; text-transform: uppercase; }
 .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
 .footer-col ul a { font-size: 14px; color: rgba(255,255,255,0.5); text-decoration: none; transition: color 0.15s; }

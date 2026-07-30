@@ -5,6 +5,7 @@ import {
   ArrowRight, Send, CheckCircle, Menu, X, Search,
   ChevronRight, Warehouse, Coffee, Store, Trees,
 } from 'lucide-react';
+import logo from './assets/cb_no_bg.png';
 
 const API = 'http://localhost:3001';
 
@@ -29,8 +30,7 @@ function Navbar() {
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="navbar-inner">
           <a href="#accueil" className="navbar-logo">
-            <div className="logo-mark"><span>CB</span></div>
-            <span className="logo-name">CB Immobilier</span>
+            <img src={logo} alt="CB Immobilier" className="navbar-logo-img" />
           </a>
           <ul className="navbar-links">
             {links.map(l => <li key={l.href}><a href={l.href}>{l.label}</a></li>)}
@@ -503,8 +503,7 @@ function Footer() {
       <div className="footer-main">
         <div>
           <div className="footer-logo">
-            <div className="footer-logo-mark"><span>CB</span></div>
-            <span className="footer-logo-name">CB Immobilier</span>
+            <img src={logo} alt="CB Immobilier" className="footer-logo-img" />
           </div>
           <p className="footer-brand-text">Votre agence immobilière de confiance au Maroc. Vente, location et gestion de patrimoine depuis 2015.</p>
         </div>

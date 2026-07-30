@@ -143,14 +143,14 @@ export default function Offres() {
             <tbody>
               {filtered.map(o => (
                 <tr key={o.id}>
-                  <td style={{ fontSize: 13, color: 'var(--color-muted)' }}>{new Date(o.createdAt).toLocaleDateString('fr-FR')}</td>
-                  <td>
+                  <td data-label="Date" style={{ fontSize: 13, color: 'var(--color-muted)' }}>{new Date(o.createdAt).toLocaleDateString('fr-FR')}</td>
+                  <td data-label="Bien">
                     <div>{o.bien?.type} — {o.bien?.localisation}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>Demandé : {o.bien?.prix?.toLocaleString('fr-FR')} MAD</div>
                   </td>
-                  <td><strong>{o.client?.nom} {o.client?.prenom}</strong></td>
-                  <td><strong style={{ color: 'var(--color-primary)' }}>{o.montant?.toLocaleString('fr-FR')} MAD</strong></td>
-                  <td>
+                  <td data-label="Client"><strong>{o.client?.nom} {o.client?.prenom}</strong></td>
+                  <td data-label="Montant"><strong style={{ color: 'var(--color-primary)' }}>{o.montant?.toLocaleString('fr-FR')} MAD</strong></td>
+                  <td data-label="Statut">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <Badge statut={o.statut} />
                       {o.statut === 'En cours' && (
@@ -176,7 +176,7 @@ export default function Offres() {
                     </div>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', width: '100%' }}>
                       <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Modifier">
                         <Edit2 size={14} />
                       </button>

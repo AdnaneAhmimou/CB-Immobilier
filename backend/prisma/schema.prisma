@@ -110,6 +110,29 @@ model Transaction {
   bien     Bien   @relation(fields: [bienId],   references: [id], onDelete: Cascade)
   clientId String
   client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  facture Facture?
+}
+
+model Facture {
+  id             String    @id @default(uuid())
+  numero         String    @unique
+  dateEmission   DateTime  @default(now())
+  dateEcheance   DateTime?
+  reference      String?
+  objet          String?
+  clientNom      String
+  clientVille    String?
+  clientTelephone String?
+  clientEmail    String?
+  lignes         String    // JSON-encoded [{ description, qte, prixUnitaire, tva }]
+  totalHT        Float
+  totalTVA       Float
+  totalTTC       Float
+  createdAt      DateTime  @default(now())
+
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
 }
 
 model BienType {

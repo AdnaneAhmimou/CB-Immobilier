@@ -102,7 +102,7 @@ export default function Matching() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 'var(--spacing-lg)', alignItems: 'start' }}>
+      <div className="matching-split" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 'var(--spacing-lg)', alignItems: 'start' }}>
 
         {/* ── Left: client list ── */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -112,7 +112,7 @@ export default function Matching() {
               <input className="input-field" placeholder="Rechercher un client…" value={search} onChange={e => setSearch(e.target.value)} style={{ fontSize: 13 }} />
             </div>
           </div>
-          <div style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="matching-split-list" style={{ maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filteredClients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-muted)', fontSize: 13 }}>
                 <Users size={28} style={{ marginBottom: 8, opacity: 0.4 }} />

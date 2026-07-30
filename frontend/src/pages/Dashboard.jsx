@@ -69,7 +69,7 @@ export default function Dashboard() {
               sub={`${(stats?.finances?.totalCommissions ?? 0).toLocaleString('fr-FR')} MAD commissions`} linkTo="/transactions" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-lg)' }}>
+          <div className="dashboard-activity-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-lg)' }}>
             <div className="card">
               <h3 className="card-title">Dernières Visites</h3>
               {stats?.recentVisites?.length > 0 ? (

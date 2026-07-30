@@ -55,7 +55,7 @@ export default function Finances() {
         <StatCard icon={Home}      label="Transactions"        value={data?.nbTransactions ?? 0}             sub="Ventes + locations closes" iconClass="orange"  />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 'var(--spacing-lg)', alignItems: 'start' }}>
+      <div className="finances-split" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 'var(--spacing-lg)', alignItems: 'start' }}>
 
         {/* Monthly bar chart */}
         <div className="card">
@@ -172,18 +172,18 @@ export default function Finances() {
             <tbody>
               {data.recent.map(t => (
                 <tr key={t.id}>
-                  <td style={{ fontSize: 13, color: 'var(--color-muted)' }}>
+                  <td data-label="Date" style={{ fontSize: 13, color: 'var(--color-muted)' }}>
                     {new Date(t.dateSignature || t.createdAt).toLocaleDateString('fr-FR')}
                   </td>
-                  <td style={{ fontSize: 13 }}>{t.bien?.type} — {t.bien?.localisation}</td>
-                  <td style={{ fontSize: 13 }}>{t.client?.nom} {t.client?.prenom}</td>
-                  <td>
+                  <td data-label="Bien" style={{ fontSize: 13 }}>{t.bien?.type} — {t.bien?.localisation}</td>
+                  <td data-label="Client" style={{ fontSize: 13 }}>{t.client?.nom} {t.client?.prenom}</td>
+                  <td data-label="Type">
                     <span className={`badge ${t.type === 'Vente' ? 'badge-navy' : 'badge-emerald'}`} style={{ fontSize: 10 }}>
                       {t.type}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{fmt(t.prixFinal)} MAD</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: 13 }}>{fmt(t.commission)} MAD</td>
+                  <td data-label="Prix final" style={{ fontWeight: 600, fontSize: 13 }}>{fmt(t.prixFinal)} MAD</td>
+                  <td data-label="Commission" style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: 13 }}>{fmt(t.commission)} MAD</td>
                 </tr>
               ))}
             </tbody>

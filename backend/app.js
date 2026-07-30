@@ -13,6 +13,7 @@ const statsRoutes = require('./routes/statsRoutes');
 const agentRoutes = require('./routes/agentRoutes');
 const bienTypeRoutes = require('./routes/bienTypeRoutes');
 const contactRoutes  = require('./routes/contactRoutes');
+const factureRoutes  = require('./routes/factureRoutes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/stats',  statsRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/bien-types', bienTypeRoutes);
 app.use('/api/contact',   contactRoutes);
+app.use('/api/factures',  factureRoutes);
 
 app.use(errorMiddleware);
 
