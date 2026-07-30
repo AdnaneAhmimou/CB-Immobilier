@@ -89,7 +89,7 @@ export default function Transactions() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette transaction ?')) return;
+    if (!window.confirm('Supprimer cette facture ?')) return;
     await fetch(`http://localhost:3001/api/transactions/${id}`, { method: 'DELETE' });
     fetchTransactions();
   };
@@ -172,11 +172,11 @@ export default function Transactions() {
     <div className="page-content">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Transactions</h1>
+          <h1 className="page-title">Factures</h1>
           <p className="page-subtitle">Suivi des ventes et locations conclues.</p>
         </div>
         <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} /> Enregistrer une transaction
+          <Plus size={16} /> Enregistrer une facture
         </button>
       </div>
 
@@ -197,7 +197,7 @@ export default function Transactions() {
                 <th>Client</th>
                 <th>Prix Final</th>
                 <th>Commission Agence</th>
-                <th style={{ width: 80 }}>Actions</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -216,21 +216,21 @@ export default function Transactions() {
                   <td data-label="Prix final"><strong>{t.prixFinal?.toLocaleString('fr-FR')} MAD</strong></td>
                   <td data-label="Commission" style={{ color: 'var(--color-success)', fontWeight: 700 }}>{t.commission?.toLocaleString('fr-FR')} MAD</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', width: '100%' }}>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', width: '100%', flexWrap: 'wrap' }}>
                       {t.facture ? (
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleRedownload(t)} title={`Télécharger ${t.facture.numero}`}>
-                          <Download size={14} />
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleRedownload(t)} title={`Télécharger ${t.facture.numero}`}>
+                          <Download size={14} /> Télécharger
                         </button>
                       ) : (
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openFacture(t)} title="Générer une facture">
-                          <FileText size={14} />
+                        <button className="btn btn-ghost btn-sm" onClick={() => openFacture(t)} title="Générer une facture">
+                          <FileText size={14} /> Facture
                         </button>
                       )}
-                      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(t)} title="Modifier">
-                        <Edit2 size={14} />
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)} title="Modifier">
+                        <Edit2 size={14} /> Modifier
                       </button>
-                      <button className="btn btn-ghost btn-icon btn-sm" onClick={() => handleDelete(t.id)} title="Supprimer" style={{ color: 'var(--color-danger)' }}>
-                        <Trash2 size={14} />
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(t.id)} title="Supprimer" style={{ color: 'var(--color-danger)' }}>
+                        <Trash2 size={14} /> Supprimer
                       </button>
                     </div>
                   </td>
@@ -242,9 +242,9 @@ export default function Transactions() {
       ) : (
         <div className="empty-state card">
           <div className="empty-state-icon"><Receipt size={32} /></div>
-          <div className="empty-state-title">Aucune transaction</div>
+          <div className="empty-state-title">Aucune facture</div>
           <div className="empty-state-desc">Vous n'avez pas encore enregistré de ventes ou de locations.</div>
-          <button className="btn btn-primary" onClick={openAdd}>Enregistrer une transaction</button>
+          <button className="btn btn-primary" onClick={openAdd}>Enregistrer une facture</button>
         </div>
       )}
 
@@ -252,7 +252,7 @@ export default function Transactions() {
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
           <div className="modal">
             <div className="modal-header">
-              <h2 className="modal-title">{editId ? 'Modifier la transaction' : 'Nouvelle transaction'}</h2>
+              <h2 className="modal-title">{editId ? 'Modifier la facture' : 'Nouvelle facture'}</h2>
               <button className="modal-close" onClick={closeModal}><X size={16} /></button>
             </div>
             <form onSubmit={handleSubmit}>
@@ -377,6 +377,13 @@ export default function Transactions() {
                     <button type="button" className="btn btn-ghost btn-sm" onClick={addLigne}><Plus size={14} /> Ajouter une ligne</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ flex: 3, fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</span>
+                      <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Qté</span>
+                      <span style={{ flex: 1.3, fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Prix unitaire</span>
+                      <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>TVA %</span>
+                      {factureForm.lignes.length > 1 && <span style={{ width: 22, flexShrink: 0 }} />}
+                    </div>
                     {factureForm.lignes.map((l, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <input className="input-field" style={{ flex: 3 }} placeholder="Description" required

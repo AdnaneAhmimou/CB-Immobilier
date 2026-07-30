@@ -5,18 +5,20 @@ import logo from '../assets/cb_no_bg.png';
 const COMPANY = {
   adresse: ['Lot Asmae 2 Appt N°: 45', 'Hay MELK CHEIKH', 'El Jadida 24000 Maroc'],
   telephone: '212 6 23 39 53 93',
-  gerant: 'M. BENEZZIDIA',
 };
 
 const ACCENT = '#1d4ed8';
 
 const styles = StyleSheet.create({
   page: { padding: 48, fontSize: 10, fontFamily: 'Times-Roman', color: '#1a1a1a' },
-  logo: { width: 100, height: 42, objectFit: 'contain', marginBottom: 10 },
+  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  // Negative margins pull the logo past the page's own padding, flush into the true top-left corner.
+  logo: { width: 240, height: 102, objectFit: 'contain', marginTop: -48, marginLeft: -48 },
+  numeroTopRight: { fontSize: 12, fontFamily: 'Times-Bold' },
   companyBlock: { fontSize: 9, color: '#555', lineHeight: 1.5, marginBottom: 28 },
   title: { fontSize: 32, fontFamily: 'Times-Bold', textAlign: 'center', marginBottom: 32, letterSpacing: 1 },
 
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  topRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 14 },
   topLabel: { fontSize: 12, fontFamily: 'Times-Bold' },
 
   infoLine: { fontSize: 11, marginBottom: 3 },
@@ -24,12 +26,18 @@ const styles = StyleSheet.create({
 
   table: { marginTop: 28 },
   tableHeaderRow: { flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: ACCENT, paddingBottom: 6, marginBottom: 10 },
-  th: { fontSize: 10, fontFamily: 'Times-Bold', color: ACCENT, letterSpacing: 0.5 },
-  thDesc: { flex: 3 },
-  thMontant: { flex: 1, textAlign: 'right' },
-  row: { flexDirection: 'row', marginBottom: 14 },
-  cellDesc: { flex: 3, fontSize: 11, fontFamily: 'Times-Bold' },
-  cellMontant: { flex: 1, fontSize: 11, fontFamily: 'Times-Bold', textAlign: 'right' },
+  th: { fontSize: 9, fontFamily: 'Times-Bold', color: ACCENT, letterSpacing: 0.5 },
+  thDesc: { flex: 2.6 },
+  thQte: { flex: 0.6, textAlign: 'center' },
+  thPrix: { flex: 1.1, textAlign: 'right' },
+  thTva: { flex: 0.7, textAlign: 'center' },
+  thTotal: { flex: 1.1, textAlign: 'right' },
+  row: { flexDirection: 'row', marginBottom: 14, alignItems: 'center' },
+  cellDesc: { flex: 2.6, fontSize: 11, fontFamily: 'Times-Bold' },
+  cellQte: { flex: 0.6, fontSize: 10, color: '#666', textAlign: 'center' },
+  cellPrix: { flex: 1.1, fontSize: 10, color: '#666', textAlign: 'right' },
+  cellTva: { flex: 0.7, fontSize: 10, color: '#666', textAlign: 'center' },
+  cellMontant: { flex: 1.1, fontSize: 11, fontFamily: 'Times-Bold', textAlign: 'right' },
 
   totals: { marginTop: 24, alignSelf: 'flex-end', width: 220 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -42,12 +50,9 @@ const styles = StyleSheet.create({
 
   amountWords: { fontSize: 10, marginTop: 24 },
 
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 32 },
+  footerRow: { marginTop: 32 },
   paymentTitle: { fontSize: 10, fontFamily: 'Times-Bold', color: ACCENT, marginBottom: 6, letterSpacing: 0.5 },
   paymentMode: { fontSize: 10 },
-  signature: { alignItems: 'center' },
-  signatureTitle: { fontSize: 10, fontFamily: 'Times-BoldItalic', textDecoration: 'underline', marginBottom: 26 },
-  signatureName: { fontSize: 10, fontFamily: 'Times-BoldItalic', textDecoration: 'underline' },
 });
 
 function money(n) {
@@ -129,7 +134,10 @@ export function FactureDocument({ facture }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Image src={logo} style={styles.logo} />
+        <View style={styles.headerTopRow}>
+          <Image src={logo} style={styles.logo} />
+          <Text style={styles.numeroTopRight}>N° : {facture.numero}</Text>
+        </View>
         <View style={styles.companyBlock}>
           {COMPANY.adresse.map(l => <Text key={l}>{l}</Text>)}
           <Text>téléphone : {COMPANY.telephone}</Text>
@@ -138,22 +146,25 @@ export function FactureDocument({ facture }) {
 
         <View style={styles.topRow}>
           <Text style={styles.topLabel}>Le {fmtDate(facture.dateEmission)}</Text>
-          <Text style={styles.topLabel}>N° : {facture.numero}</Text>
         </View>
 
         <Text style={styles.infoLine}><Text style={styles.infoLabel}>CLIENT : </Text>{facture.clientNom}</Text>
         {facture.clientTelephone && <Text style={styles.infoLine}><Text style={styles.infoLabel}>TÉLÉPHONE : </Text>{facture.clientTelephone}</Text>}
-        {facture.clientEmail && <Text style={styles.infoLine}><Text style={styles.infoLabel}>EMAIL : </Text>{facture.clientEmail}</Text>}
-        {facture.objet && <Text style={styles.infoLine}><Text style={styles.infoLabel}>OBJET : </Text>{facture.objet}</Text>}
 
         <View style={styles.table}>
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.th, styles.thDesc]}>DESCRIPTION</Text>
-            <Text style={[styles.th, styles.thMontant]}>MONTANT</Text>
+            <Text style={[styles.th, styles.thQte]}>QTÉ</Text>
+            <Text style={[styles.th, styles.thPrix]}>PRIX UNITAIRE</Text>
+            <Text style={[styles.th, styles.thTva]}>TVA %</Text>
+            <Text style={[styles.th, styles.thTotal]}>TOTAL HT</Text>
           </View>
           {lignes.map((l, i) => (
             <View key={i} style={styles.row}>
-              <Text style={styles.cellDesc}>{l.description}{parseFloat(l.qte) !== 1 ? ` (x${l.qte})` : ''}</Text>
+              <Text style={styles.cellDesc}>{l.description}</Text>
+              <Text style={styles.cellQte}>{l.qte}</Text>
+              <Text style={styles.cellPrix}>{money(parseFloat(l.prixUnitaire))}</Text>
+              <Text style={styles.cellTva}>{l.tva}%</Text>
               <Text style={styles.cellMontant}>{money(parseFloat(l.qte) * parseFloat(l.prixUnitaire))}</Text>
             </View>
           ))}
@@ -181,14 +192,8 @@ export function FactureDocument({ facture }) {
         </Text>
 
         <View style={styles.footerRow}>
-          <View>
-            <Text style={styles.paymentTitle}>MODALITÉ DE PAIEMENT</Text>
-            <Text style={styles.paymentMode}>Mode : Virement bancaire / Chèque</Text>
-          </View>
-          <View style={styles.signature}>
-            <Text style={styles.signatureTitle}>Le Gérant de la Société</Text>
-            <Text style={styles.signatureName}>S/ {COMPANY.gerant}</Text>
-          </View>
+          <Text style={styles.paymentTitle}>MODALITÉ DE PAIEMENT</Text>
+          <Text style={styles.paymentMode}>Mode : Virement bancaire / Chèque</Text>
         </View>
       </Page>
     </Document>

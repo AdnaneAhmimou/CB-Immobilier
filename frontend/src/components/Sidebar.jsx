@@ -46,7 +46,7 @@ const sections = [
       { to: '/matching',     icon: Shuffle,       label: 'Matching'     },
       { to: '/visites',      icon: CalendarClock, label: 'Visites'      },
       { to: '/offres',       icon: TrendingUp,    label: 'Offres'       },
-      { to: '/transactions', icon: Receipt,       label: 'Transactions' },
+      { to: '/transactions', icon: Receipt,       label: 'Factures' },
       { to: '/documents',    icon: FolderOpen,    label: 'Documents'    },
       { to: '/finances',     icon: BarChart2,     label: 'Finances'     },
     ],
