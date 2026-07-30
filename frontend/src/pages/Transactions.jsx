@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Search, Receipt, Trash2, Edit2, FileText, Download } from 'lucide-react';
 import { downloadFacturePdf } from '../utils/FacturePdf';
+import { API_URL } from '../config';
 
 const EMPTY_FORM = { bienId: '', clientId: '', type: 'Vente', prixFinal: '', dateSignature: '', notes: '' };
 
@@ -28,15 +29,15 @@ export default function Transactions() {
   }, []);
 
   const fetchTransactions = async () => {
-    const res = await fetch('http://localhost:3001/api/transactions');
+    const res = await fetch(`${API_URL}/api/transactions`);
     if (res.ok) setTransactions(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3001/api/biens');
+    const res = await fetch(`${API_URL}/api/biens`);
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3001/api/clients');
+    const res = await fetch(`${API_URL}/api/clients`);
     if (res.ok) setClients(await res.json());
   };
 
@@ -72,13 +73,13 @@ export default function Transactions() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editId) {
-      await fetch(`http://localhost:3001/api/transactions/${editId}`, {
+      await fetch(`${API_URL}/api/transactions/${editId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: formData.type, prixFinal: formData.prixFinal, dateSignature: formData.dateSignature, notes: formData.notes }),
       });
     } else {
-      await fetch('http://localhost:3001/api/transactions', {
+      await fetch(`${API_URL}/api/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -90,7 +91,7 @@ export default function Transactions() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette facture ?')) return;
-    await fetch(`http://localhost:3001/api/transactions/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/transactions/${id}`, { method: 'DELETE' });
     fetchTransactions();
   };
 
@@ -139,7 +140,7 @@ export default function Transactions() {
   const handleGenerateFacture = async (e) => {
     e.preventDefault();
     setGeneratingFacture(true);
-    const res = await fetch('http://localhost:3001/api/factures', {
+    const res = await fetch(`${API_URL}/api/factures`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...factureForm, transactionId: factureTransaction.id }),
@@ -156,7 +157,7 @@ export default function Transactions() {
   };
 
   const handleRedownload = async (t) => {
-    const res = await fetch(`http://localhost:3001/api/factures/${t.facture.id}`);
+    const res = await fetch(`${API_URL}/api/factures/${t.facture.id}`);
     if (res.ok) downloadFacturePdf(await res.json());
   };
 

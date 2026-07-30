@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Search, TrendingUp, Trash2, Edit2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config';
 
 function Badge({ statut }) {
   const map = { 'En cours': 'badge-amber', 'Acceptée': 'badge-green', 'Refusée': 'badge-red' };
@@ -27,15 +28,15 @@ export default function Offres() {
   }, []);
 
   const fetchOffres = async () => {
-    const res = await fetch('http://localhost:3001/api/offres');
+    const res = await fetch(`${API_URL}/api/offres`);
     if (res.ok) setOffres(await res.json());
   };
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3001/api/biens');
+    const res = await fetch(`${API_URL}/api/biens`);
     if (res.ok) setBiens(await res.json());
   };
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3001/api/clients');
+    const res = await fetch(`${API_URL}/api/clients`);
     if (res.ok) setClients(await res.json());
   };
 
@@ -56,13 +57,13 @@ export default function Offres() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editId) {
-      await fetch(`http://localhost:3001/api/offres/${editId}`, {
+      await fetch(`${API_URL}/api/offres/${editId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
     } else {
-      await fetch('http://localhost:3001/api/offres', {
+      await fetch(`${API_URL}/api/offres`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -74,7 +75,7 @@ export default function Offres() {
 
   const handleConvertToTransaction = async (o) => {
     if (!window.confirm(`Créer une transaction pour ${o.bien?.type} — ${o.bien?.localisation} à ${o.montant?.toLocaleString('fr-FR')} MAD ?`)) return;
-    await fetch('http://localhost:3001/api/transactions', {
+    await fetch(`${API_URL}/api/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -90,12 +91,12 @@ export default function Offres() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette offre ?')) return;
-    await fetch(`http://localhost:3001/api/offres/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/offres/${id}`, { method: 'DELETE' });
     fetchOffres();
   };
 
   const handleUpdateStatut = async (id, statut) => {
-    await fetch(`http://localhost:3001/api/offres/${id}`, {
+    await fetch(`${API_URL}/api/offres/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ statut }),

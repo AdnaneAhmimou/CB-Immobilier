@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Phone, Mail, CalendarClock, Edit2, X, Search } from 'lucide-react';
+import { API_URL } from '../config';
 
 function initials(nom) {
   return nom?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??';
@@ -18,7 +19,7 @@ export default function Agents() {
   useEffect(() => { fetchAgents(); }, []);
 
   const fetchAgents = () => {
-    fetch('http://localhost:3001/api/agents')
+    fetch(`${API_URL}/api/agents`)
       .then(r => r.json())
       .then(setAgents);
   };
@@ -30,7 +31,7 @@ export default function Agents() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await fetch(`http://localhost:3001/api/agents/${editAgent.id}`, {
+    await fetch(`${API_URL}/api/agents/${editAgent.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),

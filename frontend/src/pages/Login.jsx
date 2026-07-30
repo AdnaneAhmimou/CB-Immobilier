@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Users, TrendingUp, ShieldCheck } from 'lucide-react';
 import logo from '../assets/cb_immobilier_logo.jpeg';
+import { API_URL } from '../config';
 
 const features = [
   { icon: Building2, text: 'Gestion complète des biens immobiliers' },
@@ -21,7 +22,7 @@ function Login() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

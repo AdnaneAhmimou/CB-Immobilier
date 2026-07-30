@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Receipt, TrendingUp, Home, BarChart2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API_URL } from '../config';
 
 function StatCard({ icon: Icon, label, value, sub, iconClass }) {
   return (
@@ -24,7 +25,7 @@ export default function Finances() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/stats/finances')
+    fetch(`${API_URL}/api/stats/finances`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));

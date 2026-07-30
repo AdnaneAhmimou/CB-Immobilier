@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Users, UserCheck, CalendarClock, TrendingUp, Receipt, ArrowRight } from 'lucide-react';
+import { API_URL } from '../config';
 
 function StatCard({ icon: Icon, label, value, iconClass, sub, linkTo }) {
   return (
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/stats')
+    fetch(`${API_URL}/api/stats`)
       .then(r => r.json())
       .then(data => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));

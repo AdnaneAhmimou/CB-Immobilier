@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Bien {
@@ -144,6 +144,8 @@ model Document {
   id        String   @id @default(uuid())
   nom       String
   filePath  String
+  publicId  String?  // Cloudinary public_id, needed to delete the asset later
+  resourceType String? // Cloudinary resource_type (image/video/raw) — destroy() requires it to match
   order     Int      @default(0)
   createdAt DateTime @default(now())
 

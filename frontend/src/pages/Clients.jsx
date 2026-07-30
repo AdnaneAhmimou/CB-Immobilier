@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Search, Users, Edit2, Trash2 } from 'lucide-react';
+import { API_URL } from '../config';
 
 const TYPE_BADGE = {
   Vendeur:   'badge-navy',
@@ -51,7 +52,7 @@ export default function Clients({ filter = 'All' }) {
   useEffect(() => { setSearch(''); }, [filter]);
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3001/api/clients');
+    const res = await fetch(`${API_URL}/api/clients`);
     if (res.ok) setClients(await res.json());
   };
 
@@ -74,13 +75,13 @@ export default function Clients({ filter = 'All' }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer ce client ?')) return;
-    await fetch(`http://localhost:3001/api/clients/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/clients/${id}`, { method: 'DELETE' });
     fetchClients();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const url    = editId ? `http://localhost:3001/api/clients/${editId}` : 'http://localhost:3001/api/clients';
+    const url    = editId ? `${API_URL}/api/clients/${editId}` : `${API_URL}/api/clients`;
     const method = editId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,

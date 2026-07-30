@@ -1,13 +1,5 @@
-
 const multer = require('multer');
-const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-exports.upload = multer({ storage });
+// Memory storage — Vercel's filesystem is ephemeral/read-only, so files are held in
+// a buffer and streamed straight to Cloudinary instead of ever touching local disk.
+exports.upload = multer({ storage: multer.memoryStorage() });

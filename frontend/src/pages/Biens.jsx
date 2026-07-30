@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2, Loader2, MoveLeft, MoveRight } from 'lucide-react';
+import { API_URL } from '../config';
 
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
 const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
@@ -60,7 +61,8 @@ export default function Biens({ defaultTab = 'vente' }) {
   // defeats any caching layer (browser/AV/proxy) that ignores Cache-Control, since
   // there's no prior request for the new URL to have a stale entry for.
   const [cacheBust, setCacheBust]               = useState(() => Date.now());
-  const mediaUrl = (doc) => `http://localhost:3001${doc.filePath}?v=${cacheBust}`;
+  // filePath is now an absolute Cloudinary URL, not a path relative to the API — no prefix needed.
+  const mediaUrl = (doc) => `${doc.filePath}?v=${cacheBust}`;
   const [dragMediaIndex, setDragMediaIndex]     = useState(null);
 
   // Fullscreen viewer keyboard controls
@@ -87,12 +89,12 @@ export default function Biens({ defaultTab = 'vente' }) {
   }, []);
 
   const fetchCustomTypes = async () => {
-    const res = await fetch('http://localhost:3001/api/bien-types');
+    const res = await fetch(`${API_URL}/api/bien-types`);
     if (res.ok) setCustomTypes(await res.json());
   };
 
   const fetchBiens = async () => {
-    const res = await fetch('http://localhost:3001/api/biens');
+    const res = await fetch(`${API_URL}/api/biens`);
     if (!res.ok) return [];
     const data = await res.json();
     setBiens(data);
@@ -119,7 +121,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     setSelectedBien(prev => (prev?.id === bien.id ? updatedBien : prev));
     setDetailBien(prev => (prev?.id === bien.id ? updatedBien : prev));
 
-    await fetch('http://localhost:3001/api/documents/reorder', {
+    await fetch(`${API_URL}/api/documents/reorder`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: orderedMedia.map(m => m.id) }),
@@ -129,7 +131,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   };
 
   const fetchClients = async () => {
-    const res = await fetch('http://localhost:3001/api/clients');
+    const res = await fetch(`${API_URL}/api/clients`);
     if (!res.ok) return;
     const data = await res.json();
     setVendeurs(data.filter(c => c.type === 'Vendeur'));
@@ -185,14 +187,14 @@ export default function Biens({ defaultTab = 'vente' }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!PREDEFINED_TYPES.includes(formData.type) && formData.type.trim()) {
-      await fetch('http://localhost:3001/api/bien-types', {
+      await fetch(`${API_URL}/api/bien-types`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label: formData.type.trim() }),
       });
       fetchCustomTypes();
     }
-    const url    = editBienId ? `http://localhost:3001/api/biens/${editBienId}` : 'http://localhost:3001/api/biens';
+    const url    = editBienId ? `${API_URL}/api/biens/${editBienId}` : `${API_URL}/api/biens`;
     const method = editBienId ? 'PATCH' : 'POST';
     await fetch(url, {
       method,
@@ -218,7 +220,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     const txType = selectedBien.transactionType;
 
     // Create transaction (controller also updates bien status)
-    await fetch('http://localhost:3001/api/transactions', {
+    await fetch(`${API_URL}/api/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -255,7 +257,7 @@ export default function Biens({ defaultTab = 'vente' }) {
     form.append('nom',    name || file.name);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'http://localhost:3001/api/documents/upload');
+    xhr.open('POST', `${API_URL}/api/documents/upload`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(e.loaded / e.total);
     };
@@ -296,7 +298,7 @@ export default function Biens({ defaultTab = 'vente' }) {
 
   const handleDeleteDocument = async (docId, bienId) => {
     if (!confirm('Supprimer ce fichier ?')) return;
-    await fetch(`http://localhost:3001/api/documents/${docId}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/documents/${docId}`, { method: 'DELETE' });
     setCacheBust(Date.now());
     const data = await fetchBiens();
     refreshBienRefs(data, bienId);
@@ -304,7 +306,7 @@ export default function Biens({ defaultTab = 'vente' }) {
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce bien ?')) return;
-    await fetch(`http://localhost:3001/api/biens/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/biens/${id}`, { method: 'DELETE' });
     fetchBiens();
   };
 

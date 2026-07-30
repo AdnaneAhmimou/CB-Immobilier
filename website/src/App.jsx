@@ -6,8 +6,9 @@ import {
   ChevronRight, Warehouse, Coffee, Store, Trees,
 } from 'lucide-react';
 import logo from './assets/cb_no_bg.png';
+import { API_URL } from './config';
 
-const API = 'http://localhost:3001';
+const API = API_URL;
 
 /* ── Navbar ────────────────────────────────────────────────── */
 function Navbar() {

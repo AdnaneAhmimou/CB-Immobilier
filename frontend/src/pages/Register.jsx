@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/cb_immobilier_logo.jpeg';
+import { API_URL } from '../config';
 
 function Register() {
   const [formData, setFormData] = useState({ nom: '', telephone: '', email: '', password: '' });
@@ -12,7 +13,7 @@ function Register() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/auth/register', {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -20,7 +21,7 @@ function Register() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur lors de la création du compte');
 
-      const loginRes = await fetch('http://localhost:3001/api/auth/login', {
+      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, password: formData.password }),
