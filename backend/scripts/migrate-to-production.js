@@ -15,16 +15,25 @@
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const cloudinary = require('../config/cloudinary');
 const prisma = require('../config/prisma');
 
 const DB_PATH = path.join(__dirname, '..', 'prisma', 'dev.db');
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 
+// sql.js (pure JS/WASM, no native compilation needed) returns { columns, values }
+// per query — convert to the array-of-row-objects shape the rest of this script expects.
+function execToObjects(db, sql) {
+    const res = db.exec(sql);
+    if (res.length === 0) return [];
+    const { columns, values } = res[0];
+    return values.map(row => Object.fromEntries(columns.map((col, i) => [col, row[i]])));
+}
+
 function readTable(db, name) {
     try {
-        return db.prepare(`SELECT * FROM "${name}"`).all();
+        return execToObjects(db, `SELECT * FROM "${name}"`);
     } catch (err) {
         console.log(`  (skipping ${name}: ${err.message})`);
         return [];
@@ -61,7 +70,8 @@ async function main() {
         process.exit(1);
     }
 
-    const db = new Database(DB_PATH, { readonly: true });
+    const SQL = await initSqlJs();
+    const db = new SQL.Database(fs.readFileSync(DB_PATH));
     console.log(`Reading ${DB_PATH}...\n`);
 
     const bienTypes    = readTable(db, 'BienType');
