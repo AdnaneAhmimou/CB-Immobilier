@@ -193,6 +193,8 @@ export default function Biens({ defaultTab = 'vente' }) {
   // ── Submit add/edit ─────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // The picker is a button, so the browser can't enforce "required" on it
+    if (!formData.type.trim()) return alert('Choisissez ou saisissez un type de bien.');
     if (!PREDEFINED_TYPES.includes(formData.type) && formData.type.trim()) {
       await fetch(`${API_URL}/api/bien-types`, {
         method: 'POST',
@@ -485,25 +487,12 @@ export default function Biens({ defaultTab = 'vente' }) {
                     <div className="input-group">
                       <label className="input-label">Type de bien</label>
                       <TypePicker
-                        value={[...PREDEFINED_TYPES, ...customTypes].includes(formData.type) ? formData.type : 'Autre'}
-                        onChange={v => setFormData({ ...formData, type: v === 'Autre' ? '' : v })}
-                        options={[
-                          ...PREDEFINED_TYPES.map(t => ({ value: t, label: t })),
-                          ...customTypes.filter(t => !PREDEFINED_TYPES.includes(t)).map(t => ({ value: t, label: t })),
-                          { value: 'Autre', label: 'Autre…' },
-                        ]}
+                        creatable
+                        placeholder="Choisir ou saisir un type…"
+                        value={formData.type}
+                        onChange={v => setFormData({ ...formData, type: v })}
+                        options={[...new Set([...PREDEFINED_TYPES, ...customTypes])].map(t => ({ value: t, label: t }))}
                       />
-                      {![...PREDEFINED_TYPES, ...customTypes].includes(formData.type) && (
-                        <input
-                          type="text"
-                          className="input-field"
-                          style={{ marginTop: 6 }}
-                          placeholder="Ex : Café, Riad, Atelier…"
-                          required
-                          value={formData.type}
-                          onChange={set('type')}
-                        />
-                      )}
                     </div>
                     <div className="input-group">
                       <label className="input-label">Statut</label>

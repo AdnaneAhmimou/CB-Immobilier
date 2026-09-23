@@ -750,10 +750,11 @@ table.data-table { width: 100%; border-collapse: collapse; }
   .bien-card-actions { opacity: 1; }
 }
 
-/* ─── BOTTOM SHEET PICKER (mobile) ─────────────────
-   Long option lists (property types) open as a
-   scrollable sheet from the bottom instead of the
-   cramped native dropdown. */
+/* ─── TYPE PICKER ──────────────────────────────────
+   A searchable list that can also create a new entry.
+   Desktop: a panel under the trigger. Phones (≤640px):
+   a scrollable sheet that slides up from the bottom. */
+.picker { position: relative; }
 .picker-trigger {
   display: flex;
   align-items: center;
@@ -763,8 +764,79 @@ table.data-table { width: 100%; border-collapse: collapse; }
   cursor: pointer;
 }
 .picker-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-trigger-label.is-placeholder { color: var(--color-muted-soft); }
 .picker-trigger-icon { flex-shrink: 0; color: var(--color-muted); }
 
+.picker-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 130;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  animation: fadeIn 0.12s ease;
+}
+.picker-panel .picker-list { max-height: 260px; }
+
+/* Search / new-type field, shared by the panel and the sheet */
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md);
+  height: 42px;
+  border-bottom: 1px solid var(--color-hairline);
+  flex-shrink: 0;
+}
+.picker-search-icon { color: var(--color-muted); flex-shrink: 0; }
+.picker-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--color-ink);
+}
+.picker-search input::placeholder { color: var(--color-muted-soft); }
+
+.picker-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: var(--spacing-xs) 0;
+}
+.picker-option {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-base);
+  padding: 8px var(--spacing-md);
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-option:hover { background: var(--color-surface-soft); }
+.picker-option.selected { color: var(--color-primary); font-weight: 600; }
+.picker-option-create {
+  justify-content: flex-start;
+  gap: var(--spacing-sm);
+  color: var(--color-primary);
+  font-weight: 600;
+  border-top: 1px solid var(--color-hairline-soft);
+}
+.picker-empty { padding: var(--spacing-base) var(--spacing-md); font-size: 13px; color: var(--color-muted); }
+
+/* ─── BOTTOM SHEET (mobile picker) ───────────────── */
 .sheet-overlay {
   position: fixed;
   inset: 0;
@@ -777,7 +849,7 @@ table.data-table { width: 100%; border-collapse: collapse; }
 }
 .sheet {
   width: 100%;
-  max-height: 80vh;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
   background: var(--color-canvas);
@@ -817,28 +889,16 @@ table.data-table { width: 100%; border-collapse: collapse; }
   justify-content: center;
   flex-shrink: 0;
 }
-.sheet-list {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: var(--spacing-xs) 0 var(--spacing-sm);
-}
-.sheet-option {
-  width: 100%;
+/* Roomier rows and padding once the list is a touch target */
+.sheet .picker-search { height: 50px; padding: 0 var(--spacing-lg); }
+.sheet .picker-search input { font-size: 16px; }   /* 16px: iOS zooms in on anything smaller */
+.sheet .picker-list { padding: var(--spacing-xs) 0 var(--spacing-sm); }
+.sheet .picker-option {
   min-height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-base);
   padding: 12px var(--spacing-lg);
-  border: none;
-  border-bottom: 1px solid var(--color-hairline-soft);
-  background: transparent;
   font-size: 15px;
-  color: var(--color-ink);
-  text-align: left;
-  cursor: pointer;
+  border-bottom: 1px solid var(--color-hairline-soft);
 }
-.sheet-option:last-child { border-bottom: none; }
-.sheet-option:active { background: var(--color-surface-soft); }
-.sheet-option.selected { color: var(--color-primary); font-weight: 600; }
+.sheet .picker-option:last-child { border-bottom: none; }
+.sheet .picker-option:active { background: var(--color-surface-soft); }
+.sheet .picker-empty { padding: var(--spacing-lg); }
