@@ -5,7 +5,7 @@ import {
   UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
   Menu, X,
 } from 'lucide-react';
-import logo from '../assets/cb_immobilier_logo.jpeg';
+import logo from '../assets/cb_logo_wide.png';
 
 // Satellite view (data=!3m2!1e3), zoomed to city level
 const EL_JADIDA_MAPS_URL = 'https://www.google.com/maps/place/El+Jadida/@33.2334454,-8.5448642,11879m/data=!3m2!1e3!4b1!4m6!3m5!1s0xda91dc1b421fe47:0x307cf87fb6b01a1f!8m2!3d33.2347178!4d-8.5027492!16zL20vMDNodjly?entry=ttu&g_ep=EgoyMDI2MDcxMi4wIKXMDSoASAFQAw%3D%3D';
@@ -71,7 +71,6 @@ function Sidebar() {
       <div className="sidebar-header">
         <img src={logo} alt="CB Immobilier" className="sidebar-logo-img" />
         <div className="sidebar-brand">
-          <span className="sidebar-brand-name">CB Immobilier</span>
           <span className="sidebar-brand-sub">Gestion Immobilière</span>
         </div>
       </div>
@@ -122,8 +121,7 @@ function Sidebar() {
         <button className="mobile-topbar-menu-btn" onClick={() => setIsOpen(true)} title="Menu" aria-label="Ouvrir le menu">
           <Menu size={20} />
         </button>
-        <img src={logo} alt="" className="mobile-topbar-logo" />
-        <span className="mobile-topbar-name">CB Immobilier</span>
+        <img src={logo} alt="CB Immobilier" className="mobile-topbar-logo" />
       </div>
 
       <div className={`sidebar-overlay${isOpen ? ' open' : ''}`} onClick={() => setIsOpen(false)} />

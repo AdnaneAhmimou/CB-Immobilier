@@ -105,11 +105,12 @@ input, select, textarea { font-family: var(--font-family); }
   min-height: 72px;
 }
 
+/* Wide, transparent logo: height-constrained, never cropped */
 .sidebar-logo-img {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--rounded-sm);
-  object-fit: cover;
+  height: 30px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -629,7 +630,7 @@ table.data-table { width: 100%; border-collapse: collapse; }
   color: var(--color-ink);
   flex-shrink: 0;
 }
-.mobile-topbar-logo { width: 28px; height: 28px; border-radius: var(--rounded-xs); object-fit: cover; flex-shrink: 0; }
+.mobile-topbar-logo { height: 24px; width: auto; max-width: 130px; object-fit: contain; flex-shrink: 0; }
 .sidebar-close-btn { display: none; position: absolute; top: var(--spacing-md); right: var(--spacing-md); z-index: 1; }
 @media (max-width: 900px) {
   .sidebar-close-btn { display: flex; }
