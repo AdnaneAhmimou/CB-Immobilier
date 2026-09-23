@@ -135,10 +135,24 @@ function SearchBar({ activeTab, setActiveTab }) {
             <select>
               <option value="">Tous les types</option>
               <option>Appartement</option>
+              <option>Appartement avec garage</option>
               <option>Villa</option>
+              <option>Villa 2ème Niveau</option>
+              <option>Villa (Duplex)</option>
               <option>Maison</option>
-              <option>Bureau</option>
+              <option>Maison RDC</option>
+              <option>Duplex (Résidence)</option>
+              <option>Garçonnière</option>
+              <option>Riad</option>
+              <option>Immeuble R+1</option>
+              <option>Immeuble R+2</option>
+              <option>Immeuble R+3</option>
+              <option>Immeuble R+4</option>
               <option>Terrain</option>
+              <option>Terrain agricole</option>
+              <option>Lotissement</option>
+              <option>Ferme</option>
+              <option>Bureau</option>
             </select>
           </div>
           <div className="search-field">

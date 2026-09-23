@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Search, Building2, BedDouble, Ruler, CheckCircle, Edit2, Trash2, FileUp, ChevronLeft, ChevronRight, Download, Image as ImageIcon, Film, Maximize2, Loader2, MoveLeft, MoveRight } from 'lucide-react';
 import { API_URL } from '../config';
+import TypePicker from '../components/TypePicker';
 
 const IMAGE_EXTS = /\.(jpe?g|jfif|png|gif|webp|bmp|avif|heic|heif|svg)$/i;
 const VIDEO_EXTS = /\.(mp4|mov|webm|mkv|avi|m4v)$/i;
@@ -26,7 +27,11 @@ function Badge({ statut }) {
   return <span className={`badge ${STATUT_BADGE[statut] || 'badge-gray'}`}>{statut}</span>;
 }
 
-const PREDEFINED_TYPES = ['Appartement', 'Villa', 'Maison', 'Terrain', 'Bureau', 'Café', 'Magasin', 'Entrepôt', 'Local commercial'];
+const PREDEFINED_TYPES = [
+  'Appartement', 'Appartement avec garage', 'Villa', 'Villa 2ème Niveau', 'Villa (Duplex)', 'Maison', 'Maison RDC',
+  'Duplex (Résidence)', 'Garçonnière', 'Riad', 'Immeuble R+1', 'Immeuble R+2', 'Immeuble R+3', 'Immeuble R+4',
+  'Terrain', 'Terrain agricole', 'Lotissement', 'Ferme', 'Bureau', 'Café', 'Magasin', 'Entrepôt', 'Local commercial',
+];
 
 const EMPTY_VENTE    = { type: 'Appartement', statut: 'Disponible', transactionType: 'Vente',    localisation: '', superficie: '', pieces: '', prix: '', equipements: '', vendeurId: '' };
 const EMPTY_LOCATION = { type: 'Appartement', statut: 'Disponible', transactionType: 'Location', localisation: '', superficie: '', pieces: '', prix: '', equipements: '', bailleurId: '' };
@@ -54,6 +59,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   const [uploadProgress, setUploadProgress]     = useState(0);
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState('');
   const [search, setSearch]                     = useState('');
+  const [typeFilter, setTypeFilter]             = useState('');
   const [detailBien, setDetailBien]             = useState(null);
   const [photoIndex, setPhotoIndex]             = useState(0);
   const [isFullscreen, setIsFullscreen]         = useState(false);
@@ -144,6 +150,7 @@ export default function Biens({ defaultTab = 'vente' }) {
   const isVente    = tab === 'vente';
   const filtered   = biens
     .filter(b => b.transactionType === (isVente ? 'Vente' : 'Location'))
+    .filter(b => !typeFilter || b.type === typeFilter)
     .filter(b => {
       const q = search.toLowerCase();
       const names = [b.vendeur, b.bailleur, b.acheteur, b.locataire]
@@ -368,6 +375,16 @@ export default function Biens({ defaultTab = 'vente' }) {
           <Search className="search-bar-icon" size={16} />
           <input className="input-field" placeholder="Rechercher par adresse, type ou nom..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <TypePicker
+          style={{ maxWidth: 260 }}
+          title="Filtrer par type"
+          value={typeFilter}
+          onChange={setTypeFilter}
+          options={[
+            { value: '', label: 'Tous les types' },
+            ...[...new Set([...PREDEFINED_TYPES, ...customTypes, ...biens.map(b => b.type)])].map(t => ({ value: t, label: t })),
+          ]}
+        />
       </div>
 
       {/* Grid */}
@@ -467,18 +484,15 @@ export default function Biens({ defaultTab = 'vente' }) {
                   <div className="form-grid">
                     <div className="input-group">
                       <label className="input-label">Type de bien</label>
-                      <select
-                        className="input-field"
+                      <TypePicker
                         value={[...PREDEFINED_TYPES, ...customTypes].includes(formData.type) ? formData.type : 'Autre'}
-                        onChange={e => {
-                          if (e.target.value === 'Autre') setFormData({ ...formData, type: '' });
-                          else setFormData({ ...formData, type: e.target.value });
-                        }}
-                      >
-                        {PREDEFINED_TYPES.map(t => <option key={t}>{t}</option>)}
-                        {customTypes.filter(t => !PREDEFINED_TYPES.includes(t)).map(t => <option key={t}>{t}</option>)}
-                        <option value="Autre">Autre…</option>
-                      </select>
+                        onChange={v => setFormData({ ...formData, type: v === 'Autre' ? '' : v })}
+                        options={[
+                          ...PREDEFINED_TYPES.map(t => ({ value: t, label: t })),
+                          ...customTypes.filter(t => !PREDEFINED_TYPES.includes(t)).map(t => ({ value: t, label: t })),
+                          { value: 'Autre', label: 'Autre…' },
+                        ]}
+                      />
                       {![...PREDEFINED_TYPES, ...customTypes].includes(formData.type) && (
                         <input
                           type="text"

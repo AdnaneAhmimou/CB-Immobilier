@@ -3,7 +3,11 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-const BIEN_TYPES = ['Appartement', 'Villa', 'Maison', 'Terrain', 'Bureau', 'Café', 'Magasin', 'Entrepôt', 'Local commercial'];
+const BIEN_TYPES = [
+  'Appartement', 'Appartement avec garage', 'Villa', 'Villa 2ème Niveau', 'Villa (Duplex)', 'Maison', 'Maison RDC',
+  'Duplex (Résidence)', 'Garçonnière', 'Riad', 'Immeuble R+1', 'Immeuble R+2', 'Immeuble R+3', 'Immeuble R+4',
+  'Terrain', 'Terrain agricole', 'Lotissement', 'Ferme', 'Bureau', 'Café', 'Magasin', 'Entrepôt', 'Local commercial',
+];
 
 const VILLES = [
   'Casablanca, Maarif', 'Casablanca, Ain Diab', 'Casablanca, Bourgogne',

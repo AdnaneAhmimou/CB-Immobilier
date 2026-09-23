@@ -748,3 +748,96 @@ table.data-table { width: 100%; border-collapse: collapse; }
 @media (hover: none) {
   .bien-card-actions { opacity: 1; }
 }
+
+/* ─── BOTTOM SHEET PICKER (mobile) ─────────────────
+   Long option lists (property types) open as a
+   scrollable sheet from the bottom instead of the
+   cramped native dropdown. */
+.picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.picker-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-trigger-icon { flex-shrink: 0; color: var(--color-muted); }
+
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 0.15s ease;
+}
+.sheet {
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-canvas);
+  border-radius: var(--rounded-xl) var(--rounded-xl) 0 0;
+  box-shadow: var(--shadow-modal);
+  animation: sheetUp 0.2s ease;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-grabber {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-hairline);
+  margin: 10px auto 2px;
+  flex-shrink: 0;
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-base);
+  padding: var(--spacing-sm) var(--spacing-lg) var(--spacing-base);
+  border-bottom: 1px solid var(--color-hairline);
+  flex-shrink: 0;
+}
+.sheet-title { font-size: 15px; font-weight: 700; color: var(--color-ink); }
+.sheet-close {
+  border: none;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rounded-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sheet-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: var(--spacing-xs) 0 var(--spacing-sm);
+}
+.sheet-option {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-base);
+  padding: 12px var(--spacing-lg);
+  border: none;
+  border-bottom: 1px solid var(--color-hairline-soft);
+  background: transparent;
+  font-size: 15px;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.sheet-option:last-child { border-bottom: none; }
+.sheet-option:active { background: var(--color-surface-soft); }
+.sheet-option.selected { color: var(--color-primary); font-weight: 600; }
