@@ -25,15 +25,74 @@ const runNode = (code, env) => {
     }
 };
 
-test('the app refuses to boot in production without JWT_SECRET', () => {
+const DB_URL = 'postgresql://user:a-strong-password@host:5432/db';
+
+// Signs a token in one process and verifies it in another: the case that matters on
+// Vercel, where consecutive requests hit different instances of the function.
+const signIn = (env) => runNode(
+    "const a=require('./config/auth');process.stdout.write(a.signSession({id:'abc',tokenVersion:0}))",
+    { DOTENV_CONFIG_QUIET: 'true', ...env },
+).out.trim();
+
+const verifyIn = (token, env) => runNode(
+    `const a=require('./config/auth');
+     try { a.verifySession(${JSON.stringify(token)}); process.stdout.write('ok') }
+     catch { process.stdout.write('rejected') }`,
+    { DOTENV_CONFIG_QUIET: 'true', ...env },
+).out.trim();
+
+test('the app refuses to boot in production with no key material at all', () => {
     const result = runNode("require('./config/auth')", {
         NODE_ENV: 'production',
         JWT_SECRET: '',
+        DATABASE_URL: '',
+        POSTGRES_URL: '',
         DOTENV_CONFIG_QUIET: 'true',
     });
 
     assert.equal(result.ok, false, 'it started anyway — sessions would be forgeable');
-    assert.match(result.out, /JWT_SECRET is not set/);
+    assert.match(result.out, /Neither JWT_SECRET nor DATABASE_URL/);
+});
+
+test('with no JWT_SECRET, the key derived from DATABASE_URL is the same in every process', () => {
+    const env = { NODE_ENV: 'production', JWT_SECRET: '', DATABASE_URL: DB_URL };
+    const token = signIn(env);
+
+    assert.ok(token.startsWith('eyJ'), `expected a JWT, got: ${token.slice(0, 40)}`);
+    assert.equal(verifyIn(token, env), 'ok',
+        'a token signed by one instance was rejected by another — everyone would be signed out at random');
+});
+
+test('a different database password yields a different key', () => {
+    const token = signIn({ NODE_ENV: 'production', JWT_SECRET: '', DATABASE_URL: DB_URL });
+    const other = verifyIn(token, {
+        NODE_ENV: 'production',
+        JWT_SECRET: '',
+        DATABASE_URL: 'postgresql://user:a-different-password@host:5432/db',
+    });
+
+    assert.equal(other, 'rejected', 'the key is not actually tied to the database URL');
+});
+
+test('the derived key is not the database password itself', () => {
+    // The password must not be recoverable from anything the key touches.
+    const token = signIn({ NODE_ENV: 'production', JWT_SECRET: '', DATABASE_URL: DB_URL });
+    const rejected = verifyIn(token, {
+        NODE_ENV: 'production',
+        JWT_SECRET: 'a-strong-password',        // the raw password, used directly
+        DATABASE_URL: '',
+    });
+
+    assert.equal(rejected, 'rejected', 'the signing key is the raw password rather than a derivation of it');
+});
+
+test('an explicit JWT_SECRET takes priority over the derived key', () => {
+    const token = signIn({ NODE_ENV: 'production', JWT_SECRET: 'an-explicit-secret', DATABASE_URL: DB_URL });
+
+    // Same DATABASE_URL, no explicit secret: must NOT verify, proving the explicit one was used.
+    assert.equal(verifyIn(token, { NODE_ENV: 'production', JWT_SECRET: '', DATABASE_URL: DB_URL }), 'rejected');
+    // And it still verifies with the explicit secret, whatever the database URL is.
+    assert.equal(verifyIn(token, { NODE_ENV: 'production', JWT_SECRET: 'an-explicit-secret', DATABASE_URL: 'postgresql://x:y@z/db' }), 'ok');
 });
 
 test('the session cookie is Secure in production and not on localhost', () => {
