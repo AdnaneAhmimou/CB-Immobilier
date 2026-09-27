@@ -35,11 +35,24 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    let res;
+    try {
+      res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      // The request never left, or never came back: no network, DNS, offline.
+      throw new Error('Connexion au serveur impossible. Vérifiez votre connexion internet.');
+    }
+
+    // A server fault says nothing about the credentials, so it must not read as
+    // "wrong password" — that sends people hunting for a mistake they did not make.
+    if (res.status >= 500) {
+      throw new Error('Le serveur est momentanément indisponible. Réessayez dans un instant.');
+    }
+
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Erreur de connexion.');
     setAgent(data);
