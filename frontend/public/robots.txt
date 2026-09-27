@@ -1,0 +1,5 @@
+# Internal agency tool — deliberately unlisted.
+# Reinforced by the X-Robots-Tag header in /vercel.json, which also covers
+# crawlers that ignore this file.
+User-agent: *
+Disallow: /

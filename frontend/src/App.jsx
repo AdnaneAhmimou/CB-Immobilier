@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import AuthProvider from './auth/AuthProvider';
+import RequireAuth from './auth/RequireAuth';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import Biens from './pages/Biens';
@@ -11,13 +14,28 @@ import Documents from './pages/Documents';
 import Finances from './pages/Finances';
 import Agents from './pages/Agents';
 
-function App() {
+// The signed-in shell. Nothing inside it renders until RequireAuth is satisfied.
+function AppLayout() {
   return (
-    <BrowserRouter>
+    <RequireAuth>
       <div className="app-container">
         <Sidebar />
         <div className="main-content">
-          <Routes>
+          <Outlet />
+        </div>
+      </div>
+    </RequireAuth>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+
+          <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
 
             <Route path="/biens"          element={<Navigate to="/biens/vente" replace />} />
@@ -39,10 +57,10 @@ function App() {
             <Route path="/transactions"  element={<Transactions />}  />
 
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </div>
-    </BrowserRouter>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

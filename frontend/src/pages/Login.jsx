@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Building2, Users, TrendingUp, ShieldCheck } from 'lucide-react';
-import logo from '../assets/cb_immobilier_logo.jpeg';
-import { API_URL } from '../config';
+import logo from '../assets/cb_logo_wide.png';
+import { useAuth } from '../auth/AuthContext';
+import PasswordField from '../components/PasswordField';
 
 const features = [
   { icon: Building2, text: 'Gestion complète des biens immobiliers' },
@@ -15,29 +16,25 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { agent, loading, login } = useAuth();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Erreur de connexion');
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('agent', JSON.stringify(data.agent));
-      window.location.href = '/';
+      await login(email, password);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  // Already signed in (or just signed in): go where they were headed.
+  if (!loading && agent) return <Navigate to={location.state?.from?.pathname || '/'} replace />;
 
   return (
     <div className="login-page">
@@ -69,6 +66,8 @@ function Login() {
 
       <div className="login-right">
         <div className="login-form-card">
+          {/* Phones drop the brand panel entirely, so the logo comes back here. */}
+          <img src={logo} alt="CB Immobilier" className="login-mobile-logo" />
           <h2 className="login-form-title">Bienvenue</h2>
           <p className="login-form-sub">Connectez-vous pour accéder à votre espace agent.</p>
 
@@ -92,12 +91,11 @@ function Login() {
             </div>
             <div className="input-group">
               <label className="input-label">Mot de passe</label>
-              <input
-                type="password"
-                className="input-field"
+              <PasswordField
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -105,15 +103,14 @@ function Login() {
               type="submit"
               className="btn btn-primary btn-lg"
               style={{ width: '100%', marginTop: '8px' }}
-              disabled={loading}
+              disabled={submitting}
             >
-              {loading ? 'Connexion…' : 'Se connecter'}
+              {submitting ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
 
           <div className="login-form-footer">
-            Pas encore de compte ?{' '}
-            <Link to="/register">Créer un compte agent</Link>
+            Accès réservé aux agents de l'agence.
           </div>
         </div>
       </div>

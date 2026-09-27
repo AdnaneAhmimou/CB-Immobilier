@@ -68,6 +68,9 @@ model Agent {
   telephone String
   email     String  @unique
   password  String
+  // Bumped on password change: every session minted before it stops being accepted,
+  // so changing the password signs out a lost or stolen device everywhere.
+  tokenVersion Int   @default(0)
 
   visites   Visite[]
 }

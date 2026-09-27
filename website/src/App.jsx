@@ -225,10 +225,12 @@ function FeaturedBiens({ activeTab }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('Tous');
 
+  // The listings endpoint now sits behind the agency login, so this answers 401 and
+  // the section falls back to its "contact us" state rather than breaking the page.
   useEffect(() => {
     fetch(`${API}/api/biens/public`)
       .then(r => r.ok ? r.json() : [])
-      .then(d => { setBiens(d); setLoading(false); })
+      .then(d => { setBiens(Array.isArray(d) ? d : []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 

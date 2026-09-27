@@ -3,9 +3,10 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShoppingBag, Home, MapPin,
   UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
-  Menu, X,
+  Menu, X, LogOut,
 } from 'lucide-react';
 import logo from '../assets/cb_logo_wide.png';
+import { useAuth } from '../auth/AuthContext';
 
 // Satellite view (data=!3m2!1e3), zoomed to city level
 const EL_JADIDA_MAPS_URL = 'https://www.google.com/maps/place/El+Jadida/@33.2334454,-8.5448642,11879m/data=!3m2!1e3!4b1!4m6!3m5!1s0xda91dc1b421fe47:0x307cf87fb6b01a1f!8m2!3d33.2347178!4d-8.5027492!16zL20vMDNodjly?entry=ttu&g_ep=EgoyMDI2MDcxMi4wIKXMDSoASAFQAw%3D%3D';
@@ -59,8 +60,14 @@ const sections = [
   },
 ];
 
+// Two-letter monogram for the signed-in agent, e.g. "Youssef Alami" -> "YA".
+function initials(nom) {
+  return nom?.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'CB';
+}
+
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { agent, logout } = useAuth();
   const location = useLocation();
 
   // Close the drawer automatically whenever the route changes
@@ -105,11 +112,19 @@ function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="sidebar-agent">
-          <div className="sidebar-agent-avatar">CB</div>
+          <div className="sidebar-agent-avatar">{initials(agent?.nom)}</div>
           <div className="sidebar-agent-info">
-            <div className="sidebar-agent-name">CB Immobilier</div>
-            <div className="sidebar-agent-role">Agent Immobilier</div>
+            <div className="sidebar-agent-name">{agent?.nom || 'CB Immobilier'}</div>
+            <div className="sidebar-agent-role">{agent?.email || 'Agent Immobilier'}</div>
           </div>
+          <button
+            className="sidebar-logout-btn"
+            onClick={logout}
+            title="Se déconnecter"
+            aria-label="Se déconnecter"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </>

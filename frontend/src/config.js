@@ -1,4 +1,5 @@
-// In production this app is deployed as a Vercel microfrontend alongside the backend
-// (see /vercel.json at the repo root) — /api/* is same-origin, so no host prefix is
-// needed. VITE_API_URL still works as an explicit override if ever deployed standalone.
-export const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
+// The API is always same-origin: in production the backend runs as a service of the
+// same Vercel project (/vercel.json), and in development Vite proxies /api to the
+// local backend (vite.config.js). Same-origin means the httpOnly session cookie is
+// sent with every request without any code having to know it exists.
+export const API_URL = '';

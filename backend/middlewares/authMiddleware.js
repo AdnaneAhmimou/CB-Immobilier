@@ -1,23 +1,40 @@
-
-const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 const catchAsync = require('../utils/catchAsync');
+const { COOKIE_NAME, verifySession } = require('../config/auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'cb-immobilier-secret-key-2026';
+const unauthorized = (res, message) => res.status(401).json({ message });
 
+// Every /api route goes through this unless it is explicitly listed as public in app.js.
 exports.protect = catchAsync(async (req, res, next) => {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
+    // The cookie is the real session. The Bearer header is kept for scripts and tests
+    // that cannot hold a cookie jar.
+    let token = req.cookies?.[COOKIE_NAME];
+    const header = req.headers.authorization;
+    if (!token && header && header.startsWith('Bearer ')) token = header.slice(7);
+
+    if (!token) return unauthorized(res, 'Non autorisé. Connexion requise.');
+
+    let decoded;
+    try {
+        decoded = verifySession(token);
+    } catch {
+        // Expired, tampered with, or signed by a different secret — all the same to us.
+        return unauthorized(res, 'Session expirée ou invalide. Reconnectez-vous.');
     }
-    
-    if (!token) return res.status(401).json({ message: 'Non autorisé. Token manquant.' });
 
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const currentUser = await prisma.agent.findUnique({ where: { id: decoded.id } });
+    const agent = await prisma.agent.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, nom: true, email: true, telephone: true, tokenVersion: true },
+    });
+    // A token stays cryptographically valid after its account is deleted, so the
+    // account has to be re-checked on every request, not just at login.
+    if (!agent) return unauthorized(res, 'Compte introuvable.');
 
-    if (!currentUser) return res.status(401).json({ message: 'Utilisateur introuvable.' });
+    // Sessions issued before the last password change are no longer accepted.
+    if ((decoded.v ?? 0) !== agent.tokenVersion) {
+        return unauthorized(res, 'Session expirée ou invalide. Reconnectez-vous.');
+    }
 
-    req.user = currentUser;
+    req.user = agent;
     next();
 });
