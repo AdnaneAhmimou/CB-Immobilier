@@ -12,6 +12,9 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL
     || 'postgresql://postgres:test@localhost:55432/cbtest';
 process.env.JWT_SECRET = 'test-secret-not-the-production-one';
 process.env.NODE_ENV = 'test';
+// Forces protect() to re-issue the cookie on every request instead of once a minute,
+// so the sliding-window tests below don't need to wait a real minute to observe it.
+process.env.SESSION_REFRESH_AFTER_MS = '0';
 
 const { test, before, after, beforeEach } = require('node:test');
 const fs = require('node:fs');
@@ -23,7 +26,7 @@ const jwt = require('jsonwebtoken');
 const app = require('../app');
 const prisma = require('../config/prisma');
 const rateLimit = require('../middlewares/rateLimitMiddleware');
-const { COOKIE_NAME } = require('../config/auth');
+const { COOKIE_NAME, IDLE_MINUTES, shouldRefresh } = require('../config/auth');
 
 const PASSWORD = 'correct-horse-battery';
 const EMAIL = 'agent@cb-immobilier.test';
@@ -212,8 +215,10 @@ test('login succeeds and returns a hardened session cookie', async () => {
     assert.match(raw, /SameSite=Lax/i, 'cookie would ride along on cross-site requests');
     assert.match(raw, /Path=\//i);
 
-    const maxAge = Number(raw.match(/Max-Age=(\d+)/i)?.[1]);
-    assert.equal(maxAge, 30 * 24 * 60 * 60, 'session should last 30 days');
+    // No Max-Age/Expires: the browser must treat this as a session cookie and drop
+    // it when the tab/browser closes, per "quit the page -> sign in again".
+    assert.equal(/max-age/i.test(raw), false, 'cookie has Max-Age — it would survive closing the browser');
+    assert.equal(/expires/i.test(raw), false, 'cookie has Expires — it would survive closing the browser');
 
     const body = await res.json();
     assert.equal(body.email, EMAIL);
@@ -238,6 +243,74 @@ test('a valid session reaches protected data', async () => {
     }
 });
 
+// ── Session lifetime: tab-bound, 10-minute idle window ─────────────────────────
+
+test('a fresh login token expires after IDLE_MINUTES, not days', async () => {
+    const cookie = await loginAs();
+    const raw = cookie.split('=').slice(1).join('=');   // "cb_session=<jwt>" -> "<jwt>"
+    const decoded = jwt.decode(raw);
+
+    assert.equal(IDLE_MINUTES, 10, 'IDLE_MINUTES default changed — update this test deliberately');
+    assert.equal(decoded.exp - decoded.iat, IDLE_MINUTES * 60,
+        'token lifetime does not match the configured idle window');
+});
+
+test('shouldRefresh is false for a brand-new token and true once it has aged', () => {
+    const now = Math.floor(Date.now() / 1000);
+    assert.equal(shouldRefresh({ iat: now }), true,
+        'this suite runs with SESSION_REFRESH_AFTER_MS=0, so even a fresh token should refresh');
+    assert.equal(shouldRefresh({ iat: now - 3600 }), true, 'an hour-old token must always refresh');
+    assert.equal(shouldRefresh({}), true, 'a token with no iat should be treated as refreshable');
+});
+
+test('activity slides the session forward: every authenticated request renews it', async () => {
+    // SESSION_REFRESH_AFTER_MS=0 (set at the top of this file) makes every request
+    // renew the token, standing in for "enough time has passed to be worth it" —
+    // exactly what keeps an agent who is actively using the app from ever hitting
+    // the idle wall mid-task.
+    const first = await loginAs();
+
+    // jwt's `iat` has one-second granularity, so a renewal within the same wall-clock
+    // second as the login is byte-identical to it — correct, but not what this test
+    // is checking. Crossing a second boundary is what makes "renewed" observable.
+    await new Promise((r) => setTimeout(r, 1100));
+
+    const res = await call('GET', '/api/auth/me', { cookie: first });
+    assert.equal(res.status, 200);
+    const renewed = sessionCookie(res).header;
+    assert.ok(renewed, 'an authenticated request did not renew the session cookie');
+    assert.notEqual(renewed, first, 'the renewed cookie is identical to the old one');
+
+    const decodedFirst = jwt.decode(first.split('=')[1]);
+    const decodedRenewed = jwt.decode(renewed.split('=')[1]);
+    assert.ok(decodedRenewed.iat > decodedFirst.iat, 'the renewed token is not actually newer');
+    assert.equal(decodedRenewed.id, decodedFirst.id, 'renewal changed who the session belongs to');
+
+    // The renewed cookie is itself a working session, not a one-off.
+    const again = await call('GET', '/api/biens', { cookie: renewed });
+    assert.equal(again.status, 200);
+});
+
+test('an idle token — older than the window — is rejected rather than silently renewed', async () => {
+    // Simulates a tab left open past the idle limit: the token's own expiry, not the
+    // refresh logic, is what ends the session. jwt.verify refuses it before protect()
+    // ever gets a chance to renew.
+    const idledOut = jwt.sign({ id: agentId, v: 0 }, process.env.JWT_SECRET, { expiresIn: '-1s' });
+    const res = await call('GET', '/api/auth/me', { token: idledOut });
+    assert.equal(res.status, 401);
+    assert.equal(sessionCookie(res).header, null, 'an expired token must not be renewed');
+});
+
+test('the session cookie carries no Max-Age or Expires — closing the browser ends it', async () => {
+    const cookie = await loginAs();
+    const res = await call('GET', '/api/auth/me', { cookie });
+    const { raw } = sessionCookie(res);
+
+    assert.ok(raw, 'no refreshed cookie was returned to check');
+    assert.equal(/max-age/i.test(raw), false, 'a renewed cookie must stay a session cookie too');
+    assert.equal(/expires/i.test(raw), false, 'a renewed cookie must stay a session cookie too');
+});
+
 test('a garbage or tampered token is rejected', async () => {
     const cookie = await loginAs();
     const tampered = cookie.slice(0, -3) + 'aaa';
@@ -249,7 +322,7 @@ test('a garbage or tampered token is rejected', async () => {
 });
 
 test('a token signed with a different secret is rejected', async () => {
-    const forged = jwt.sign({ id: agentId, v: 0 }, 'attacker-secret', { expiresIn: '30d' });
+    const forged = jwt.sign({ id: agentId, v: 0 }, 'attacker-secret', { expiresIn: '10m' });
     const res = await call('GET', '/api/auth/me', { token: forged });
     assert.equal(res.status, 401);
 });
@@ -264,7 +337,7 @@ test('a token for a deleted account is rejected', async () => {
     const doomed = await prisma.agent.create({
         data: { nom: 'Parti', telephone: '', email: 'parti@test.local', password: await bcrypt.hash(PASSWORD, 10) },
     });
-    const token = jwt.sign({ id: doomed.id, v: 0 }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: doomed.id, v: 0 }, process.env.JWT_SECRET, { expiresIn: '10m' });
 
     assert.equal((await call('GET', '/api/auth/me', { token })).status, 200);
     await prisma.agent.delete({ where: { id: doomed.id } });

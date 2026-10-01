@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
 const catchAsync = require('../utils/catchAsync');
-const { COOKIE_NAME, signSession, cookieOptions } = require('../config/auth');
+const { COOKIE_NAME, cookieOptions, setSessionCookie } = require('../config/auth');
 const rateLimit = require('../middlewares/rateLimitMiddleware');
 
 const BCRYPT_ROUNDS = 12;
@@ -56,12 +56,15 @@ exports.login = catchAsync(async (req, res) => {
     // toward a lockout.
     rateLimit.succeeded(req);
 
-    res.cookie(COOKIE_NAME, signSession(agent), cookieOptions());
+    setSessionCookie(res, agent);
     res.json(publicAgent(agent));
 });
 
 exports.logout = (req, res) => {
-    res.clearCookie(COOKIE_NAME, { ...cookieOptions(), maxAge: undefined });
+    // cookieOptions() carries no maxAge now (see config/auth.js), so this just needs
+    // to match httpOnly/secure/sameSite/path for the browser to recognize it as the
+    // same cookie and drop it.
+    res.clearCookie(COOKIE_NAME, cookieOptions());
     res.json({ message: 'Déconnecté.' });
 };
 
@@ -91,6 +94,8 @@ exports.changePassword = catchAsync(async (req, res) => {
     });
 
     // ...then hand this device, the one that knew the old password, a fresh session.
-    res.cookie(COOKIE_NAME, signSession(updated), cookieOptions());
+    // Via setSessionCookie so this wins over any stale refresh protect() already
+    // queued earlier in this same request (see config/auth.js for why that matters).
+    setSessionCookie(res, updated);
     res.json({ message: 'Mot de passe mis à jour.' });
 });

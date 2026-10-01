@@ -4,10 +4,19 @@ const jwt = require('jsonwebtoken');
 
 const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
-// Sessions last a month, per the agency's request: agents work from their phones
-// and should not be pushed back to the login screen every day.
-const SESSION_DAYS = Number(process.env.SESSION_DAYS || 30);
-const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
+// Sessions are deliberately short-lived, per the agency: leaving the app should mean
+// signing in again. Two separate mechanisms, because neither covers the other:
+//
+//  * The cookie has no Max-Age, so the browser drops it when it closes.
+//  * The token expires after IDLE_MINUTES and is renewed while the agent is active,
+//    so an abandoned screen stops working even if the browser stays open.
+const IDLE_MINUTES = Number(process.env.SESSION_IDLE_MINUTES || 10);
+const IDLE_MS = IDLE_MINUTES * 60 * 1000;
+
+// Re-issuing on every single request would re-sign a token many times a second for
+// no benefit; once a minute keeps the sliding window accurate enough. Overridable so
+// tests can force a refresh on every request instead of waiting a minute for one.
+const REFRESH_AFTER_MS = Number(process.env.SESSION_REFRESH_AFTER_MS ?? 60 * 1000);
 
 const COOKIE_NAME = 'cb_session';
 
@@ -59,7 +68,11 @@ const deriveSecret = () => {
 const SECRET = deriveSecret();
 
 const signSession = (agent) =>
-  jwt.sign({ id: agent.id, v: agent.tokenVersion ?? 0 }, SECRET, { expiresIn: `${SESSION_DAYS}d` });
+  jwt.sign({ id: agent.id, v: agent.tokenVersion ?? 0 }, SECRET, { expiresIn: `${IDLE_MINUTES}m` });
+
+// True once the token is old enough to be worth re-issuing (see REFRESH_AFTER_MS).
+const shouldRefresh = (decoded) =>
+  !decoded.iat || Date.now() - decoded.iat * 1000 >= REFRESH_AFTER_MS;
 
 const verifySession = (token) => jwt.verify(token, SECRET);
 
@@ -69,8 +82,34 @@ const cookieOptions = () => ({
   httpOnly: true,
   secure: IS_PROD,          // plain http on localhost would drop a Secure cookie
   sameSite: 'lax',          // survives normal navigation, not cross-site form posts
-  maxAge: SESSION_MS,
   path: '/',
+  // No maxAge and no expires on purpose: that makes it a session cookie, which the
+  // browser discards when it closes rather than writing to disk.
 });
 
-module.exports = { COOKIE_NAME, SESSION_DAYS, SESSION_MS, IS_PROD, signSession, verifySession, cookieOptions };
+/**
+ * Sets the session cookie, replacing any Set-Cookie already queued for it on this
+ * response rather than appending another one.
+ *
+ * Without this, a request that both (a) is old enough for protect()'s idle-window
+ * refresh and (b) hits a handler that reissues the session itself — change-password
+ * is the one case today — ends up with two "Set-Cookie: cb_session=..." headers in
+ * the same response: one stale (the middleware's, still the old tokenVersion) and
+ * one authoritative (the handler's). Which one a browser keeps is not something to
+ * rely on, so every place that sets this cookie goes through here instead of
+ * res.cookie() directly, and the most recent call always wins.
+ */
+const setSessionCookie = (res, agent) => {
+  const existing = res.getHeader('Set-Cookie');
+  if (existing) {
+    const kept = (Array.isArray(existing) ? existing : [existing])
+      .filter((c) => !c.startsWith(`${COOKIE_NAME}=`));
+    res.setHeader('Set-Cookie', kept);
+  }
+  res.cookie(COOKIE_NAME, signSession(agent), cookieOptions());
+};
+
+module.exports = {
+  COOKIE_NAME, IDLE_MINUTES, IDLE_MS, REFRESH_AFTER_MS, IS_PROD,
+  signSession, verifySession, shouldRefresh, cookieOptions, setSessionCookie,
+};

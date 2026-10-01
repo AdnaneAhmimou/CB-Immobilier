@@ -105,10 +105,14 @@ test('the session cookie is Secure in production and not on localhost', () => {
     assert.equal(prod.secure, true, 'production cookie must be HTTPS-only');
     assert.equal(prod.httpOnly, true);
     assert.equal(prod.sameSite, 'lax');
-    assert.equal(prod.maxAge, 30 * 24 * 60 * 60 * 1000);
+    // Deliberately no maxAge/expires: it must be a session cookie, so closing the
+    // browser signs the agent out (the whole point of this session model).
+    assert.equal('maxAge' in prod, false, 'cookie has a maxAge — it would survive closing the browser');
+    assert.equal('expires' in prod, false, 'cookie has an expires — it would survive closing the browser');
 
     const dev = read({ NODE_ENV: 'development', JWT_SECRET: 'dev', VERCEL: '' });
     assert.equal(dev.secure, false, 'a Secure cookie would never be stored over plain-http localhost');
+    assert.equal('maxAge' in dev, false);
 });
 
 test('server errors do not leak internals in production', () => {
