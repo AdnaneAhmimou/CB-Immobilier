@@ -41,6 +41,7 @@ function App() {
             <Route path="/biens"          element={<Navigate to="/biens/vente" replace />} />
             <Route path="/biens/vente"    element={<Biens defaultTab="vente" />} />
             <Route path="/biens/location" element={<Biens defaultTab="location" />} />
+            <Route path="/biens/vendus"   element={<Biens defaultTab="vendus" />} />
 
             <Route path="/clients"    element={<Clients filter="All"       />} />
             <Route path="/acheteurs"  element={<Clients filter="Acheteur"  />} />

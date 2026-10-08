@@ -37,7 +37,7 @@ const EMPTY_VENTE    = { type: 'Appartement', statut: 'Disponible', transactionT
 const EMPTY_LOCATION = { type: 'Appartement', statut: 'Disponible', transactionType: 'Location', localisation: '', superficie: '', pieces: '', prix: '', equipements: '', bailleurId: '' };
 
 export default function Biens({ defaultTab = 'vente' }) {
-  const [tab, setTab]             = useState(defaultTab);     // 'vente' | 'location'
+  const [tab, setTab]             = useState(defaultTab);     // 'vente' | 'location' | 'vendus'
   const [biens, setBiens]         = useState([]);
   const [vendeurs, setVendeurs]   = useState([]);
   const [bailleurs, setBailleurs] = useState([]);
@@ -147,9 +147,19 @@ export default function Biens({ defaultTab = 'vente' }) {
   };
 
   // ── Filtered lists per tab ──────────────────────────────────
-  const isVente    = tab === 'vente';
-  const filtered   = biens
-    .filter(b => b.transactionType === (isVente ? 'Vente' : 'Location'))
+  // "Biens Vendus" is a sale-side view too (only Vente properties ever get the
+  // Vendu statut), so owner/buyer labels, price wording, etc. follow the same
+  // "Vente" branch as the À Vendre tab.
+  const isVendusTab = tab === 'vendus';
+  const isVente     = tab !== 'location';
+  const filtered    = biens
+    .filter(b => {
+      if (isVendusTab) return b.statut === 'Vendu';
+      // Sold properties move out of À Vendre and into Biens Vendus — they are no
+      // longer part of the active catalogue.
+      if (tab === 'vente') return b.transactionType === 'Vente' && b.statut !== 'Vendu';
+      return b.transactionType === 'Location';
+    })
     .filter(b => !typeFilter || b.type === typeFilter)
     .filter(b => {
       const q = search.toLowerCase();
@@ -337,18 +347,23 @@ export default function Biens({ defaultTab = 'vente' }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Biens Immobiliers</h1>
-          <p className="page-subtitle">Catalogue des propriétés en vente et en location.</p>
+          <p className="page-subtitle">
+            {isVendusTab ? 'Historique des propriétés vendues.' : 'Catalogue des propriétés en vente et en location.'}
+          </p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>
-          <Plus size={16} /> Ajouter un bien
-        </button>
+        {!isVendusTab && (
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Plus size={16} /> Ajouter un bien
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 'var(--spacing-lg)', borderBottom: '2px solid var(--color-hairline)', paddingBottom: 0 }}>
         {[
-          { key: 'vente',    label: `À Vendre (${biens.filter(b => b.transactionType === 'Vente').length})` },
+          { key: 'vente',    label: `À Vendre (${biens.filter(b => b.transactionType === 'Vente' && b.statut !== 'Vendu').length})` },
           { key: 'location', label: `À Louer (${biens.filter(b => b.transactionType === 'Location').length})` },
+          { key: 'vendus',   label: `Biens Vendus (${biens.filter(b => b.statut === 'Vendu').length})` },
         ].map(t => (
           <button
             key={t.key}
@@ -393,9 +408,15 @@ export default function Biens({ defaultTab = 'vente' }) {
       {filtered.length === 0 ? (
         <div className="empty-state card">
           <div className="empty-state-icon"><Building2 size={32} /></div>
-          <div className="empty-state-title">Aucun bien {isVente ? 'à vendre' : 'à louer'}</div>
-          <div className="empty-state-desc">Ajoutez un bien pour commencer.</div>
-          <button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Ajouter un bien</button>
+          <div className="empty-state-title">
+            Aucun bien {isVendusTab ? 'vendu' : isVente ? 'à vendre' : 'à louer'}
+          </div>
+          <div className="empty-state-desc">
+            {isVendusTab ? 'Les biens passent ici une fois marqués « Vendu ».' : 'Ajoutez un bien pour commencer.'}
+          </div>
+          {!isVendusTab && (
+            <button className="btn btn-primary" onClick={openAdd}><Plus size={16} /> Ajouter un bien</button>
+          )}
         </div>
       ) : (
         <div className="bien-grid">

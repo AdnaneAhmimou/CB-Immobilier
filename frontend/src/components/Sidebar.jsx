@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShoppingBag, Home, MapPin,
   UserSearch, User, CalendarClock, TrendingUp, Receipt, Shuffle, FolderOpen, BarChart2, UserCog,
-  Menu, X, LogOut,
+  Menu, X, LogOut, CheckCircle2,
 } from 'lucide-react';
 import logo from '../assets/cb_logo_wide.png';
 import { useAuth } from '../auth/AuthContext';
@@ -27,8 +27,9 @@ const sections = [
   {
     label: 'Biens',
     items: [
-      { to: '/biens/vente',    icon: ShoppingBag, label: 'À Vendre' },
-      { to: '/biens/location', icon: Home,        label: 'À Louer'  },
+      { to: '/biens/vente',    icon: ShoppingBag,  label: 'À Vendre'     },
+      { to: '/biens/location', icon: Home,         label: 'À Louer'      },
+      { to: '/biens/vendus',   icon: CheckCircle2, label: 'Biens Vendus' },
     ],
   },
   {
