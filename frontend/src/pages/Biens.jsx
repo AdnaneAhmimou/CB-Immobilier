@@ -17,10 +17,11 @@ const getMedia  = (bien) => (bien?.documents || []).filter(d => IMAGE_EXTS.test(
 const isVideoDoc = (d) => VIDEO_EXTS.test(d.filePath);
 
 const STATUT_BADGE = {
-  'Disponible': 'badge-green',
-  'Réservé':    'badge-amber',
-  'Vendu':      'badge-red',
-  'Loué':       'badge-blue',
+  'Disponible':     'badge-green',
+  'Réservé':        'badge-amber',
+  'Vendu':          'badge-red',
+  'Loué':           'badge-blue',
+  'Vente annulée':  'badge-gray',
 };
 
 function Badge({ statut }) {
@@ -519,7 +520,7 @@ export default function Biens({ defaultTab = 'vente' }) {
                       <label className="input-label">Statut</label>
                       <select className="input-field" value={formData.statut} onChange={set('statut')}>
                         <option>Disponible</option><option>Réservé</option>
-                        {isVente ? <option>Vendu</option> : <option>Loué</option>}
+                        {isVente ? <><option>Vendu</option><option>Vente annulée</option></> : <option>Loué</option>}
                       </select>
                     </div>
                     <div className="input-group full">
