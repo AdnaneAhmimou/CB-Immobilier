@@ -30,7 +30,7 @@ const DB_URL = 'postgresql://user:a-strong-password@host:5432/db';
 // Signs a token in one process and verifies it in another: the case that matters on
 // Vercel, where consecutive requests hit different instances of the function.
 const signIn = (env) => runNode(
-    "const a=require('./config/auth');process.stdout.write(a.signSession({id:'abc',tokenVersion:0}))",
+    "const a=require('./config/auth');process.stdout.write(a.signSession({id:'abc',tokenVersion:0}).token)",
     { DOTENV_CONFIG_QUIET: 'true', ...env },
 ).out.trim();
 
@@ -96,23 +96,27 @@ test('an explicit JWT_SECRET takes priority over the derived key', () => {
 });
 
 test('the session cookie is Secure in production and not on localhost', () => {
-    const read = (env) => JSON.parse(runNode(
-        "const a=require('./config/auth');process.stdout.write(JSON.stringify(a.cookieOptions()))",
+    const read = (env, expiresArg) => JSON.parse(runNode(
+        `const a=require('./config/auth');` +
+        `process.stdout.write(JSON.stringify(a.cookieOptions(${expiresArg || ''})))`,
         { DOTENV_CONFIG_QUIET: 'true', ...env },
     ).out.trim());
 
-    const prod = read({ NODE_ENV: 'production', JWT_SECRET: 'a-real-secret' });
+    const prod = read({ NODE_ENV: 'production', JWT_SECRET: 'a-real-secret' }, 'new Date("2026-01-01T21:00:00Z")');
     assert.equal(prod.secure, true, 'production cookie must be HTTPS-only');
     assert.equal(prod.httpOnly, true);
     assert.equal(prod.sameSite, 'lax');
-    // Deliberately no maxAge/expires: it must be a session cookie, so closing the
-    // browser signs the agent out (the whole point of this session model).
-    assert.equal('maxAge' in prod, false, 'cookie has a maxAge — it would survive closing the browser');
-    assert.equal('expires' in prod, false, 'cookie has an expires — it would survive closing the browser');
+    // An actual issued cookie DOES carry an expiry now — the daily cutoff is meant
+    // to survive closing the tab/browser, unlike the old tab-bound model.
+    assert.ok(prod.expires, 'cookie passed an explicit expiry but cookieOptions dropped it');
+
+    // With no expiry argument (logout's clearCookie is the only such caller — it
+    // wants to supply its own expiry-in-the-past, not inherit one), none is set.
+    const bare = read({ NODE_ENV: 'production', JWT_SECRET: 'a-real-secret' });
+    assert.equal('expires' in bare, false, 'cookieOptions() with no argument should not invent an expiry');
 
     const dev = read({ NODE_ENV: 'development', JWT_SECRET: 'dev', VERCEL: '' });
     assert.equal(dev.secure, false, 'a Secure cookie would never be stored over plain-http localhost');
-    assert.equal('maxAge' in dev, false);
 });
 
 test('server errors do not leak internals in production', () => {

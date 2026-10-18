@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Building2, Users, TrendingUp, ShieldCheck } from 'lucide-react';
 import logo from '../assets/cb_logo_wide.png';
@@ -12,13 +12,42 @@ const features = [
   { icon: ShieldCheck, text: 'Accès sécurisé pour vos agents' },
 ];
 
+// Remembers only the email across sessions — a convenience, not a credential, so
+// localStorage (not the session itself) is the right place for it. Every time the
+// agent is dropped back to this screen — the daily cutoff, closing the tab, an
+// explicit logout — the email is already there and only the password is typed.
+const REMEMBERED_EMAIL_KEY = 'cb_remembered_email';
+
+const readRememberedEmail = () => {
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY) || '';
+  } catch {
+    return '';   // private browsing / blocked storage — just start blank
+  }
+};
+
+const rememberEmail = (email) => {
+  try {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+  } catch {
+    // Not fatal — the next visit simply won't have it prefilled.
+  }
+};
+
 function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(readRememberedEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { agent, loading, login } = useAuth();
   const location = useLocation();
+  const passwordRef = useRef(null);
+
+  // Email already filled in from last time: jump straight to the password field
+  // rather than making the agent click into it first.
+  useEffect(() => {
+    if (email) passwordRef.current?.focus();
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps -- once, on mount only
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -26,6 +55,7 @@ function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
+      rememberEmail(email);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -86,12 +116,14 @@ function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="agent@cb-immobilier.com"
+                autoComplete="username"
                 required
               />
             </div>
             <div className="input-group">
               <label className="input-label">Mot de passe</label>
               <PasswordField
+                ref={passwordRef}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

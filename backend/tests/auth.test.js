@@ -12,9 +12,6 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL
     || 'postgresql://postgres:test@localhost:55432/cbtest';
 process.env.JWT_SECRET = 'test-secret-not-the-production-one';
 process.env.NODE_ENV = 'test';
-// Forces protect() to re-issue the cookie on every request instead of once a minute,
-// so the sliding-window tests below don't need to wait a real minute to observe it.
-process.env.SESSION_REFRESH_AFTER_MS = '0';
 
 const { test, before, after, beforeEach } = require('node:test');
 const fs = require('node:fs');
@@ -26,7 +23,7 @@ const jwt = require('jsonwebtoken');
 const app = require('../app');
 const prisma = require('../config/prisma');
 const rateLimit = require('../middlewares/rateLimitMiddleware');
-const { COOKIE_NAME, IDLE_MINUTES, shouldRefresh } = require('../config/auth');
+const { COOKIE_NAME, sessionCutoff } = require('../config/auth');
 
 const PASSWORD = 'correct-horse-battery';
 const EMAIL = 'agent@cb-immobilier.test';
@@ -214,11 +211,7 @@ test('login succeeds and returns a hardened session cookie', async () => {
     assert.match(raw, /HttpOnly/i, 'cookie is readable by page scripts');
     assert.match(raw, /SameSite=Lax/i, 'cookie would ride along on cross-site requests');
     assert.match(raw, /Path=\//i);
-
-    // No Max-Age/Expires: the browser must treat this as a session cookie and drop
-    // it when the tab/browser closes, per "quit the page -> sign in again".
-    assert.equal(/max-age/i.test(raw), false, 'cookie has Max-Age — it would survive closing the browser');
-    assert.equal(/expires/i.test(raw), false, 'cookie has Expires — it would survive closing the browser');
+    // Its Max-Age/Expires are checked in detail in the "daily cutoff" tests below.
 
     const body = await res.json();
     assert.equal(body.email, EMAIL);
@@ -243,72 +236,63 @@ test('a valid session reaches protected data', async () => {
     }
 });
 
-// ── Session lifetime: tab-bound, 10-minute idle window ─────────────────────────
+// ── Session lifetime: open until a fixed daily cutoff, not an idle window ──────
 
-test('a fresh login token expires after IDLE_MINUTES, not days', async () => {
+test('a fresh login token expires exactly at the next daily cutoff', async () => {
+    const before = new Date();
     const cookie = await loginAs();
+    const after = new Date();
+
     const raw = cookie.split('=').slice(1).join('=');   // "cb_session=<jwt>" -> "<jwt>"
     const decoded = jwt.decode(raw);
+    const expMs = decoded.exp * 1000;
 
-    assert.equal(IDLE_MINUTES, 10, 'IDLE_MINUTES default changed — update this test deliberately');
-    assert.equal(decoded.exp - decoded.iat, IDLE_MINUTES * 60,
-        'token lifetime does not match the configured idle window');
+    // sessionCutoff(now) is computed independently at both ends of the login call;
+    // the real expiry must land between the two, same as the cutoff would.
+    const earliestCutoff = sessionCutoff(before).getTime();
+    const latestCutoff = sessionCutoff(after).getTime();
+    assert.ok(expMs >= earliestCutoff - 1000 && expMs <= latestCutoff + 1000,
+        `token expires ${new Date(expMs).toISOString()}, expected ~${new Date(earliestCutoff).toISOString()}`);
+
+    // And very much not "10 minutes" or "30 days" — this is the regression this
+    // test exists for: a stale constant silently reverting the session model.
+    const lifetimeHours = (expMs - Date.now()) / 3600000;
+    assert.ok(lifetimeHours > 0 && lifetimeHours <= 24, `implausible session lifetime: ${lifetimeHours}h`);
 });
 
-test('shouldRefresh is false for a brand-new token and true once it has aged', () => {
-    const now = Math.floor(Date.now() / 1000);
-    assert.equal(shouldRefresh({ iat: now }), true,
-        'this suite runs with SESSION_REFRESH_AFTER_MS=0, so even a fresh token should refresh');
-    assert.equal(shouldRefresh({ iat: now - 3600 }), true, 'an hour-old token must always refresh');
-    assert.equal(shouldRefresh({}), true, 'a token with no iat should be treated as refreshable');
+test('the session cookie expires at the same instant as the token (no plain session cookie)', async () => {
+    const res = await call('POST', '/api/auth/login', { body: { email: EMAIL, password: PASSWORD } });
+    const { raw, header } = sessionCookie(res);
+
+    // Opposite of the old tab-bound model: the cutoff is meant to survive closing
+    // the tab or the browser during the working day, so the cookie needs a real
+    // Expires rather than being a volatile session cookie. (Express's res.cookie
+    // sets Expires, not Max-Age, when given a Date — browsers honor either.)
+    assert.match(raw, /expires=/i, 'cookie has no Expires — it would die when the tab closes');
+
+    const token = header.split('=').slice(1).join('=');
+    const decoded = jwt.decode(token);
+    const cookieExpiresMatch = raw.match(/expires=([^;]+)/i);
+    const cookieExpiresMs = new Date(cookieExpiresMatch[1]).getTime();
+    assert.ok(Math.abs(cookieExpiresMs - decoded.exp * 1000) < 2000,
+        'cookie Expires and token exp have drifted apart');
 });
 
-test('activity slides the session forward: every authenticated request renews it', async () => {
-    // SESSION_REFRESH_AFTER_MS=0 (set at the top of this file) makes every request
-    // renew the token, standing in for "enough time has passed to be worth it" —
-    // exactly what keeps an agent who is actively using the app from ever hitting
-    // the idle wall mid-task.
-    const first = await loginAs();
-
-    // jwt's `iat` has one-second granularity, so a renewal within the same wall-clock
-    // second as the login is byte-identical to it — correct, but not what this test
-    // is checking. Crossing a second boundary is what makes "renewed" observable.
-    await new Promise((r) => setTimeout(r, 1100));
-
-    const res = await call('GET', '/api/auth/me', { cookie: first });
-    assert.equal(res.status, 200);
-    const renewed = sessionCookie(res).header;
-    assert.ok(renewed, 'an authenticated request did not renew the session cookie');
-    assert.notEqual(renewed, first, 'the renewed cookie is identical to the old one');
-
-    const decodedFirst = jwt.decode(first.split('=')[1]);
-    const decodedRenewed = jwt.decode(renewed.split('=')[1]);
-    assert.ok(decodedRenewed.iat > decodedFirst.iat, 'the renewed token is not actually newer');
-    assert.equal(decodedRenewed.id, decodedFirst.id, 'renewal changed who the session belongs to');
-
-    // The renewed cookie is itself a working session, not a one-off.
-    const again = await call('GET', '/api/biens', { cookie: renewed });
-    assert.equal(again.status, 200);
-});
-
-test('an idle token — older than the window — is rejected rather than silently renewed', async () => {
-    // Simulates a tab left open past the idle limit: the token's own expiry, not the
-    // refresh logic, is what ends the session. jwt.verify refuses it before protect()
-    // ever gets a chance to renew.
-    const idledOut = jwt.sign({ id: agentId, v: 0 }, process.env.JWT_SECRET, { expiresIn: '-1s' });
-    const res = await call('GET', '/api/auth/me', { token: idledOut });
-    assert.equal(res.status, 401);
-    assert.equal(sessionCookie(res).header, null, 'an expired token must not be renewed');
-});
-
-test('the session cookie carries no Max-Age or Expires — closing the browser ends it', async () => {
+test('repeated requests do not reissue the cookie — the cutoff is fixed, not a sliding window', async () => {
     const cookie = await loginAs();
     const res = await call('GET', '/api/auth/me', { cookie });
-    const { raw } = sessionCookie(res);
+    assert.equal(res.status, 200);
+    assert.equal(sessionCookie(res).header, null,
+        'a valid request reissued the session — the daily cutoff should never move');
+});
 
-    assert.ok(raw, 'no refreshed cookie was returned to check');
-    assert.equal(/max-age/i.test(raw), false, 'a renewed cookie must stay a session cookie too');
-    assert.equal(/expires/i.test(raw), false, 'a renewed cookie must stay a session cookie too');
+test('a token past the daily cutoff is rejected', async () => {
+    // Simulates the clock passing 9pm: the token's own expiry ends the session:
+    // there is no refresh logic left that could paper over it.
+    const pastCutoff = jwt.sign({ id: agentId, v: 0 }, process.env.JWT_SECRET, { expiresIn: '-1s' });
+    const res = await call('GET', '/api/auth/me', { token: pastCutoff });
+    assert.equal(res.status, 401);
+    assert.equal(sessionCookie(res).header, null, 'an expired token must not be renewed');
 });
 
 test('a garbage or tampered token is rejected', async () => {

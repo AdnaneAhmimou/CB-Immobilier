@@ -1,24 +1,19 @@
 // Single source of truth for how sessions are signed and carried.
 const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
+const { nextDailyCutoff } = require('./dailyCutoff');
 
 const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
-// Sessions are deliberately short-lived, per the agency: leaving the app should mean
-// signing in again. Two separate mechanisms, because neither covers the other:
-//
-//  * The cookie has no Max-Age, so the browser drops it when it closes.
-//  * The token expires after IDLE_MINUTES and is renewed while the agent is active,
-//    so an abandoned screen stops working even if the browser stays open.
-const IDLE_MINUTES = Number(process.env.SESSION_IDLE_MINUTES || 10);
-const IDLE_MS = IDLE_MINUTES * 60 * 1000;
-
-// Re-issuing on every single request would re-sign a token many times a second for
-// no benefit; once a minute keeps the sliding window accurate enough. Overridable so
-// tests can force a refresh on every request instead of waiting a minute for one.
-const REFRESH_AFTER_MS = Number(process.env.SESSION_REFRESH_AFTER_MS ?? 60 * 1000);
-
 const COOKIE_NAME = 'cb_session';
+
+// Sessions last from whenever the agent signs in until a fixed clock time each day —
+// not a fixed duration, not an idle timer. Per the agency: the app should stay open
+// for the whole working day and only ask for a password again the next morning.
+const CUTOFF_HOUR = Number(process.env.SESSION_CUTOFF_HOUR ?? 21);       // 9pm
+const CUTOFF_TZ   = process.env.SESSION_CUTOFF_TZ || 'Africa/Casablanca';
+
+const sessionCutoff = (from = new Date()) => nextDailyCutoff(from, { hour: CUTOFF_HOUR, timeZone: CUTOFF_TZ });
 
 // The key that signs sessions. Two supported sources, in order:
 //
@@ -67,37 +62,42 @@ const deriveSecret = () => {
 
 const SECRET = deriveSecret();
 
-const signSession = (agent) =>
-  jwt.sign({ id: agent.id, v: agent.tokenVersion ?? 0 }, SECRET, { expiresIn: `${IDLE_MINUTES}m` });
-
-// True once the token is old enough to be worth re-issuing (see REFRESH_AFTER_MS).
-const shouldRefresh = (decoded) =>
-  !decoded.iat || Date.now() - decoded.iat * 1000 >= REFRESH_AFTER_MS;
+// Both the JWT's own expiry and the cookie's Max-Age are pinned to the exact same
+// instant, computed once per sign so the two can never drift apart — a cookie that
+// outlives its token would just mean a pointless 401 at the door; a token that
+// outlives its cookie would never be presented past that point anyway.
+const signSession = (agent, { now = new Date() } = {}) => {
+  const cutoff = sessionCutoff(now);
+  const token = jwt.sign(
+    { id: agent.id, v: agent.tokenVersion ?? 0 },
+    SECRET,
+    { expiresIn: Math.max(1, Math.round((cutoff.getTime() - now.getTime()) / 1000)) },
+  );
+  return { token, cutoff };
+};
 
 const verifySession = (token) => jwt.verify(token, SECRET);
 
 // httpOnly keeps the token out of reach of any script on the page, so an XSS bug
 // cannot walk off with a session the way it could with localStorage.
-const cookieOptions = () => ({
+const cookieOptions = (expires) => ({
   httpOnly: true,
   secure: IS_PROD,          // plain http on localhost would drop a Secure cookie
   sameSite: 'lax',          // survives normal navigation, not cross-site form posts
   path: '/',
-  // No maxAge and no expires on purpose: that makes it a session cookie, which the
-  // browser discards when it closes rather than writing to disk.
+  // A real expiry (not a plain session cookie) on purpose: the whole point of the
+  // daily cutoff is that the app stays signed in across closing the tab or the
+  // browser during the working day — only the 9pm cutoff itself signs anyone out.
+  ...(expires ? { expires } : {}),
 });
 
 /**
  * Sets the session cookie, replacing any Set-Cookie already queued for it on this
- * response rather than appending another one.
- *
- * Without this, a request that both (a) is old enough for protect()'s idle-window
- * refresh and (b) hits a handler that reissues the session itself — change-password
- * is the one case today — ends up with two "Set-Cookie: cb_session=..." headers in
- * the same response: one stale (the middleware's, still the old tokenVersion) and
- * one authoritative (the handler's). Which one a browser keeps is not something to
- * rely on, so every place that sets this cookie goes through here instead of
- * res.cookie() directly, and the most recent call always wins.
+ * response rather than appending another one. protect() never sets this cookie
+ * (the daily cutoff is fixed, nothing to renew mid-session), so today only login
+ * and change-password ever call this — but a response ending up with two
+ * conflicting Set-Cookie headers for the same name is the kind of bug that is
+ * cheap to make impossible outright rather than merely unlikely.
  */
 const setSessionCookie = (res, agent) => {
   const existing = res.getHeader('Set-Cookie');
@@ -106,10 +106,11 @@ const setSessionCookie = (res, agent) => {
       .filter((c) => !c.startsWith(`${COOKIE_NAME}=`));
     res.setHeader('Set-Cookie', kept);
   }
-  res.cookie(COOKIE_NAME, signSession(agent), cookieOptions());
+  const { token, cutoff } = signSession(agent);
+  res.cookie(COOKIE_NAME, token, cookieOptions(cutoff));
 };
 
 module.exports = {
-  COOKIE_NAME, IDLE_MINUTES, IDLE_MS, REFRESH_AFTER_MS, IS_PROD,
-  signSession, verifySession, shouldRefresh, cookieOptions, setSessionCookie,
+  COOKIE_NAME, CUTOFF_HOUR, CUTOFF_TZ, IS_PROD,
+  sessionCutoff, signSession, verifySession, cookieOptions, setSessionCookie,
 };
