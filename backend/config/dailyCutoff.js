@@ -1,47 +1,20 @@
 /**
  * "Next CUTOFF_HOUR:00 in CUTOFF_TZ" — the wall-clock moment a daily session dies.
  *
- * Morocco does not sit at a fixed UTC offset: it is UTC+1 year-round except for a
- * pause to UTC+0 during Ramadan, on dates that move every year. A hard-coded offset
- * would be wrong for roughly a month a year. The IANA tz database (Africa/Casablanca)
- * already encodes those exact dates, and Node's built-in Intl reads it — so this asks
- * Intl rather than carrying the rule ourselves.
+ * This deliberately does NOT use the host's built-in Intl/ICU timezone data.
+ * Morocco's rule has changed more than once in recent years — UTC+1 year-round
+ * with a pause to UTC+0 for Ramadan from 2018, then abolished entirely in favor of
+ * a permanent UTC+0 from 20 September 2026 — and different Node builds and OSes
+ * pick up such changes on their own schedules. A machine's local Node (built
+ * before the change) and Vercel's production runtime (built after it) can
+ * legitimately disagree about "right now" in Morocco on the very same day — which
+ * is exactly what happened while building this. moment-timezone bundles its own
+ * IANA snapshot as package data, so the answer depends on the moment-timezone
+ * version pinned in package.json, not on whichever environment happens to run it —
+ * and it is bumped independently of Node/OS updates when Morocco changes its rule
+ * again.
  */
-
-const localYMD = (date, timeZone) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
-    }).formatToParts(date);
-    const get = (type) => Number(parts.find((p) => p.type === type).value);
-    return { y: get('year'), m: get('month'), d: get('day') };
-};
-
-// How far `timeZone`'s wall clock is ahead of UTC at `date`, in minutes.
-const offsetMinutesAt = (date, timeZone) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone, hour12: false,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-    }).formatToParts(date);
-    const get = (type) => Number(parts.find((p) => p.type === type).value);
-    const hour = get('hour') % 24;   // Intl can print midnight as "24" with hour12: false
-    const asUTC = Date.UTC(get('year'), get('month') - 1, get('day'), hour, get('minute'), get('second'));
-    return (asUTC - date.getTime()) / 60000;
-};
-
-// The UTC instant that is CUTOFF_HOUR:00:00 local time on the given local calendar
-// day. Two passes: the first pass's offset locates the right instant; the second
-// re-derives the offset from that instant itself, in case a Ramadan transition falls
-// between "now" and the cutoff (it never does at a fixed evening hour in practice —
-// transitions land near 2-3am local — but this makes the result correct rather than
-// merely usually correct).
-const instantAt = ({ y, m, d }, hour, timeZone) => {
-    let offset = offsetMinutesAt(new Date(Date.UTC(y, m - 1, d, hour, 0, 0)), timeZone);
-    let utcMs = Date.UTC(y, m - 1, d, hour, 0, 0) - offset * 60000;
-    offset = offsetMinutesAt(new Date(utcMs), timeZone);
-    utcMs = Date.UTC(y, m - 1, d, hour, 0, 0) - offset * 60000;
-    return new Date(utcMs);
-};
+const moment = require('moment-timezone');
 
 /**
  * The next occurrence of `hour`:00 in `timeZone` that is strictly after `from`.
@@ -51,15 +24,9 @@ const instantAt = ({ y, m, d }, hour, timeZone) => {
  * expiry that is already in the past.
  */
 function nextDailyCutoff(from = new Date(), { hour = 21, timeZone = 'Africa/Casablanca' } = {}) {
-    const today = localYMD(from, timeZone);
-    const todayCutoff = instantAt(today, hour, timeZone);
-    if (todayCutoff.getTime() > from.getTime()) return todayCutoff;
-
-    // Already past today's cutoff: step forward a nominal day in UTC, then re-read
-    // the local calendar date from that instant — correct even across a Ramadan
-    // offset change, unlike adding 24h to the local Y/M/D by hand.
-    const tomorrow = localYMD(new Date(from.getTime() + 24 * 60 * 60 * 1000), timeZone);
-    return instantAt(tomorrow, hour, timeZone);
+    let candidate = moment.tz(from, timeZone).hour(hour).minute(0).second(0).millisecond(0);
+    if (!candidate.isAfter(from)) candidate = candidate.add(1, 'day');
+    return candidate.toDate();
 }
 
 module.exports = { nextDailyCutoff };

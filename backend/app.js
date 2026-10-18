@@ -63,24 +63,7 @@ app.use((req, res, next) => {
 // ── Public endpoints ───────────────────────────────────────
 // Everything mounted before the app.use('/api', protect) line below is reachable
 // without a session. Keep this list as short as it can be.
-app.get('/api/health', (req, res) => {
-    // TEMP diagnostic (no secrets) — tracking down a production/local discrepancy
-    // in the daily-cutoff timezone math. Remove once resolved.
-    const now = new Date();
-    res.json({
-        ok: true,
-        _diag: {
-            nowUTC: now.toISOString(),
-            moroccoFormatted: new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Casablanca', dateStyle: 'medium', timeStyle: 'medium' }).format(now),
-            moroccoOffsetViaShortOffset: new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Casablanca', timeZoneName: 'shortOffset' }).format(now),
-            nodeVersion: process.version,
-            icu: Intl.DateTimeFormat('en').resolvedOptions(),
-            supportedValuesOfTZ: typeof Intl.supportedValuesOf === 'function'
-                ? Intl.supportedValuesOf('timeZone').includes('Africa/Casablanca')
-                : 'Intl.supportedValuesOf unavailable',
-        },
-    });
-});
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);                       // login is public; the rest self-protect
 app.use('/api/contact', rateLimit({ max: 5, windowMs: 10 * 60 * 1000 }), contactRoutes);
 

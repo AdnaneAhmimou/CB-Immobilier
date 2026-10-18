@@ -20,6 +20,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "moment-timezone": "^0.6.5",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.7",
     "sql.js": "^1.14.1"
